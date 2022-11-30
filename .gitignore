@@ -1,0 +1,36 @@
+# Package managers
+node_modules/
+/packages/
+
+# IDE user-specific files
+.vs
+.idea
+*.suo
+*.user
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+[Bb]in/
+[Oo]bj/
+
+# ReSharper and friends
+_ReSharper*/
+*.[Rr]e[Ss]harper
+_TeamCity*
+*.dotCover
+
+# Default ignored files
+/shelf/
+/workspace.xml
+
+# Rider ignored files
+/projectSettingsUpdater.xml
+/modules.xml
+/contentModel.xml
+
+# Inputs
+AdventOfCode/inputs
+!AdventOfCode/inputs/day0.txt

@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Shared.fs" />
+        <Compile Include="Examples\Day0.fs" />
+        <Compile Include="Examples\Day0.Alternative.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\AdventOfCode.Core\AdventOfCode.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
+        <PackageReference Include="xunit" Version="2.4.1" />
+    </ItemGroup>
+
+</Project>
