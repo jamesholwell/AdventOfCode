@@ -69,7 +69,7 @@ module Day2 =
         >> Seq.sum 
 
     let SolvePartTwo = 
-        Shared.Split 
+        Input.Lines 
         >> Seq.map (fun x -> Decode x[0], DecodeOutcome x[2]) 
         >> Seq.map (fun x -> fst x, FigureOut x)
         >> Seq.map Score
