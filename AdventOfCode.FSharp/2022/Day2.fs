@@ -20,6 +20,13 @@ module Day2 =
         | 'Z' -> Scissors
         | _ -> raise (System.ArgumentOutOfRangeException $"{s} is not a supported hand")
 
+    let DecodeOutcome = fun s -> 
+        match s with
+        | 'X' -> Lose
+        | 'Y' -> Draw
+        | 'Z' -> Win
+        | _ -> raise (System.ArgumentOutOfRangeException $"{s} is not a supported outcome")
+
     let ScoreShape = fun s ->
         match s with
         | Rock     -> 1
@@ -42,12 +49,29 @@ module Day2 =
         | Scissors, Paper  -> Lose
         | _                -> Draw
 
+    let FigureOut = fun (r : Shape * Outcome) ->
+        match r with
+        | Rock, Win      -> Paper
+        | Rock, Lose     -> Scissors
+        | Paper, Win     -> Scissors
+        | Paper, Lose    -> Rock
+        | Scissors, Win  -> Rock
+        | Scissors, Lose -> Paper
+        | _              -> fst r
+
     let Score = fun (r : Round) ->
         ScoreShape (snd r) + ScorePlay (Play r)
 
     let Solve = 
         Input.Lines 
         >> Seq.map (fun x -> Decode x[0], Decode x[2]) 
+        >> Seq.map Score
+        >> Seq.sum 
+
+    let SolvePartTwo = 
+        Shared.Split 
+        >> Seq.map (fun x -> Decode x[0], DecodeOutcome x[2]) 
+        >> Seq.map (fun x -> fst x, FigureOut x)
         >> Seq.map Score
         >> Seq.sum 
 
@@ -75,9 +99,29 @@ C Z"
     let ``Solves Part One Example`` () =
         let actual = Solve exampleInput
         Assert.Equal(15, actual)
+        
+    [<Fact>]
+    let ``Figures out first example round correctly`` () =
+        let actual = FigureOut (Rock, Draw)
+        Assert.Equal(Rock, actual)
+
+    [<Fact>]
+    let ``Figures out second example round correctly`` () =
+        let actual = FigureOut (Paper, Lose)
+        Assert.Equal(Rock, actual)
+
+    [<Fact>]
+    let ``Figures out third example round correctly`` () =
+        let actual = FigureOut (Scissors, Win)
+        Assert.Equal(Rock, actual)
+
+    [<Fact>]
+    let ``Solves Part Two Example`` () =
+        let actual = SolvePartTwo exampleInput
+        Assert.Equal(12, actual)
 
 type Day2(input: string) =
     let input = Input.Read input
     interface ISolver with
         member this.SolvePartOne() = Day2.Solve input |> string
-        member this.SolvePartTwo() = failwith "Solve part 1 first"
+        member this.SolvePartTwo() = Day2.SolvePartTwo input |> string
