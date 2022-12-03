@@ -18,13 +18,13 @@ internal class SolverCli {
         this.factory = factory;
     }
 
-    public void Solve(PuzzleSpecification puzzle, string? solverHint) {
+    public void Solve(PuzzleSpecification puzzle) {
         if (!TryReadInput(puzzle, out var input)) return;
 
         // resolve solver
         ISolver? solver;
         try {
-            solver = factory.Create(puzzle.Day, puzzle.Event, input, solverHint);
+            solver = factory.Create(puzzle.Day, puzzle.Event, input, puzzle.SolverHint);
         }
         catch (AmbiguousSolverException e) {
             Console.ForegroundColor = ConsoleColor.DarkRed;
@@ -71,7 +71,7 @@ internal class SolverCli {
         console.WriteLine(solution.ToString());
     }
 
-    public void Benchmark(PuzzleSpecification puzzle, string? solverHint) {
+    public void Benchmark(PuzzleSpecification puzzle) {
         if (!TryReadInput(puzzle, out var input)) return;
 
         var solvers = factory.CreateAll(puzzle.Day, puzzle.Event, input);

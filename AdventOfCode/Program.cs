@@ -8,10 +8,6 @@ var puzzleArgument = new Argument<PuzzleSpecification>(
     description: "Puzzle to solve e.g. 'day1' or '2015 day1' or 'day3 part2'",
     parse: PuzzleSpecification.Parser) {Arity = ArgumentArity.ZeroOrMore};
 
-var solverArgument = new Option<string>(
-    "--solver",
-    "Solver to use e.g. csharp, fsharp or specify solver name");
-
 var listArgument = new Option<bool>(
     "--list",
     "Show all available solvers");
@@ -20,14 +16,14 @@ var benchmarkArgument = new Option<bool>(
     "--bench",
     "Benchmark solver performance");
 
-var root = new RootCommand {puzzleArgument, solverArgument, listArgument, benchmarkArgument};
+var root = new RootCommand {puzzleArgument, listArgument, benchmarkArgument};
 
 root.SetHandler(context => {
     var factory =
         new SolverFactory()
             .AddAssembly<AdventOfCode.CSharp.Examples.Day0>("csharp")
-            .AddAssembly<Day0>("fsharp"); 
-    
+            .AddAssembly<Day0>("fsharp");
+
     var cli = new SolverCli(context.Console, factory);
 
     // if we are listing we don't need to parse the puzzle
@@ -38,7 +34,6 @@ root.SetHandler(context => {
     }
 
     var puzzle = context.ParseResult.GetValueForArgument(puzzleArgument);
-    var solverHint = context.ParseResult.GetValueForOption(solverArgument);
     var isBenchmarking = context.ParseResult.GetValueForOption(benchmarkArgument);
 
     if (string.IsNullOrWhiteSpace(puzzle.Day) && DateTime.UtcNow.Month == 12)
@@ -46,11 +41,11 @@ root.SetHandler(context => {
 
     if (string.IsNullOrWhiteSpace(puzzle.Event))
         puzzle.Event = DateTime.UtcNow.AddYears(DateTime.UtcNow.Month < 12 ? -1 : 0).Year.ToString();
-    
+
     if (isBenchmarking)
-        cli.Benchmark(puzzle, solverHint);
+        cli.Benchmark(puzzle);
     else
-        cli.Solve(puzzle, solverHint);
+        cli.Solve(puzzle);
 });
 
 await root.InvokeAsync(args);

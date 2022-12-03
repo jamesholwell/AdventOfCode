@@ -9,6 +9,8 @@ internal struct PuzzleSpecification {
 
     public bool IsPart2 { get; set; }
 
+    public string SolverHint { get; set; }
+
     public static ParseArgument<PuzzleSpecification> Parser =>
         result =>
         {
@@ -30,8 +32,11 @@ internal struct PuzzleSpecification {
                 else if (value.StartsWith("part"))
                     spec.IsPart2 = "part2".Equals(value, StringComparison.OrdinalIgnoreCase);
 
-                else
+                else if (value.StartsWith("20") || value == "examples")
                     spec.Event = value;
+
+                else
+                    spec.SolverHint = value;
             }
 
             result.OnlyTake(taken);
