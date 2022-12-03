@@ -12,13 +12,31 @@ var solverArgument = new Option<string>(
     "--solver",
     "Solver to use e.g. csharp, fsharp or specify solver name");
 
+var listArgument = new Option<bool>(
+    "--list",
+    "Show all available solvers");
+
 var benchmarkArgument = new Option<bool>(
     "--bench",
     "Benchmark solver performance");
 
-var root = new RootCommand {puzzleArgument, solverArgument, benchmarkArgument};
+var root = new RootCommand {puzzleArgument, solverArgument, listArgument, benchmarkArgument};
 
 root.SetHandler(context => {
+    var factory =
+        new SolverFactory()
+            .AddAssembly<AdventOfCode.CSharp.Examples.Day0>("csharp")
+            .AddAssembly<Day0>("fsharp"); 
+    
+    var cli = new SolverCli(context.Console, factory);
+
+    // if we are listing we don't need to parse the puzzle
+    var isListing = context.ParseResult.GetValueForOption(listArgument);
+    if (isListing) {
+        cli.ListSolvers();
+        return;
+    }
+
     var puzzle = context.ParseResult.GetValueForArgument(puzzleArgument);
     var solverHint = context.ParseResult.GetValueForOption(solverArgument);
     var isBenchmarking = context.ParseResult.GetValueForOption(benchmarkArgument);
@@ -28,17 +46,8 @@ root.SetHandler(context => {
 
     if (string.IsNullOrWhiteSpace(puzzle.Event))
         puzzle.Event = DateTime.UtcNow.AddYears(DateTime.UtcNow.Month < 12 ? -1 : 0).Year.ToString();
-
-    var factory =
-        new SolverFactory()
-            .AddAssembly<AdventOfCode.CSharp.Examples.Day0>("csharp")
-            .AddAssembly<Day0>("fsharp");
-
-    var cli = new SolverCli(context.Console, factory);
-
-    if (string.IsNullOrWhiteSpace(puzzle.Day))
-        cli.ListSolvers();
-    else if (isBenchmarking)
+    
+    if (isBenchmarking)
         cli.Benchmark(puzzle, solverHint);
     else
         cli.Solve(puzzle, solverHint);
