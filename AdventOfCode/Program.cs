@@ -23,6 +23,9 @@ root.SetHandler(context => {
     var solverHint = context.ParseResult.GetValueForOption(solverArgument);
     var isBenchmarking = context.ParseResult.GetValueForOption(benchmarkArgument);
 
+    if (string.IsNullOrWhiteSpace(puzzle.Day) && DateTime.UtcNow.Month == 12)
+        puzzle.Day = $"day{DateTime.UtcNow.Day}";
+
     if (string.IsNullOrWhiteSpace(puzzle.Event))
         puzzle.Event = DateTime.UtcNow.AddYears(DateTime.UtcNow.Month < 12 ? -1 : 0).Year.ToString();
 
