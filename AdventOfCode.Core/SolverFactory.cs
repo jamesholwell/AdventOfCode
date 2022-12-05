@@ -31,6 +31,8 @@ public class SolverFactory {
 
     public SolverFactory AddAssembly<T>(string prefix) {
         foreach (var type in typeof(T).Assembly.GetTypes().Where(t => typeof(ISolver).IsAssignableFrom(t))) {
+            if (type.Name.Contains("TemplateSolver")) continue;
+
             var @event = type.Namespace == null
                 ? string.Empty
                 : type.Namespace[(type.Namespace.LastIndexOf('.') + 1)..].TrimStart('_');

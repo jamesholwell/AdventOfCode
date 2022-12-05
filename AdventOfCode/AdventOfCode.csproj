@@ -1,6 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
+      <Compile Remove="inputs\**" />
+      <EmbeddedResource Remove="inputs\**" />
+      <None Remove="inputs\**" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\AdventOfCode.FSharp\AdventOfCode.FSharp.fsproj" />
         <ProjectReference Include="..\AdventOfCode.CSharp\AdventOfCode.CSharp.csproj" />
     </ItemGroup>

@@ -7,8 +7,7 @@
 
     <ItemGroup>
         <Compile Include="Shared.fs" />
-        <Compile Include="Examples\Day0.fs" />
-        <Compile Include="Examples\Day0.Alternative.fs" />
+        <Compile Include="Template.fs" />
     </ItemGroup>
 
     <ItemGroup>

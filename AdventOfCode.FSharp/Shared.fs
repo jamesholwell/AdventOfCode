@@ -1,14 +1,8 @@
 ﻿module AdventOfCode.FSharp.Shared
 
-open System
-
-let NormalizeLineEndings (s: string) =
-    s.Replace("\r\n", "\n")
-
-let Split (s: string) =
-    NormalizeLineEndings(s).Split("\n", StringSplitOptions.RemoveEmptyEntries)
-
 let SplitBy (b: string) (s: string) =
-    NormalizeLineEndings(s).Split(b, StringSplitOptions.RemoveEmptyEntries)
+    s.Replace("\r\n", "\n").Trim('\n').Split(b)
+
+let Split = SplitBy "\n"
 
 let SplitInt = Split >> Seq.map int
