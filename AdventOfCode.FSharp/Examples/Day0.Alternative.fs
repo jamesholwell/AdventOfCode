@@ -22,5 +22,5 @@ module Day0Alternative =
 [<Solver("day0", "sprintf")>]
 type Day0Alternative(input: string) =
     interface ISolver with
-        member this.SolvePartOne() = Day0.Solve input
+        member this.SolvePartOne() = Day0.Solve input |> string
         member this.SolvePartTwo() = failwith "NotImplemented"
