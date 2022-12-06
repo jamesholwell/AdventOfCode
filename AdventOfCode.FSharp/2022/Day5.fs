@@ -39,22 +39,40 @@ module Day5 =
         | [| crates; instructions |] -> ParseCrates crates, ParseInstructions instructions
         | _ -> failwith $"Input not in correct format"
 
-    let Solve input = 
+    let Init input =
         let crates, instructions = Parse input
         let mutable stacks = [| for i in 0..9 -> new Stack<char>() |]
         
         for crate in crates do 
             stacks[crate.Stack].Push(crate.Label)
 
+        stacks, instructions
+
+    let TopOfStacks =
+        Array.filter (fun (s : Stack<char>) -> s.Count > 0) 
+        >> Array.map (fun (s : Stack<char>) -> s.Peek()) 
+        >> System.String
+
+    let Solve input = 
+        let stacks, instructions = Init input
+
         for instruction in instructions do
             for i in 1..instruction.Number do
                 stacks[instruction.To].Push(stacks[instruction.From].Pop())
 
-        stacks |> Array.filter (fun s -> s.Count > 0) |> Array.map (fun s -> s.Peek()) |> System.String
+        TopOfStacks stacks
 
-    let SolvePartTwo = 
-        Shared.Split
-        >> fun s -> ""
+    let SolvePartTwo input = 
+        let stacks, instructions = Init input
+        let buffer = new Stack<char>()
+
+        for instruction in instructions do
+            for i in 1..instruction.Number do
+                buffer.Push(stacks[instruction.From].Pop())
+            while (buffer.Count > 0) do
+                stacks[instruction.To].Push(buffer.Pop())
+
+        TopOfStacks stacks
 
     let exampleInput = @"
     [D]    
