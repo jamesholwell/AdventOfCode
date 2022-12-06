@@ -13,6 +13,7 @@
         <Compile Include="2022\Day3.fs" />
         <Compile Include="2022\Day4.fs" />
         <Compile Include="2022\Day5.fs" />
+        <Compile Include="2022\Day6.fs" />
     </ItemGroup>
 
     <ItemGroup>
