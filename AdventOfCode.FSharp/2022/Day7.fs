@@ -42,8 +42,16 @@ module Day7 =
          |> Seq.filter ((>) 100000)
          |> Seq.sum
 
+    let SolvePartTwo input =
+        let files = Parse input
+        let sizes = DirectorySizes files 
+        let freespace = 70000000 - (dict sizes)["/"]
 
-    let SolvePartTwo = fun _ -> failwith "Solve part 1 first"
+        sizes
+        |> Seq.map snd
+        |> Seq.filter ((<=) (30000000 - freespace))
+        |> Seq.sort
+        |> Seq.head
 
     let exampleInput = @"
 $ cd /
@@ -97,6 +105,11 @@ $ ls
     let ``Solves Part One Example`` () =
         let actual = Solve exampleInput
         Assert.Equal(95437, actual)
+
+    [<Fact>]
+    let ``Solves Part Two Example`` () =
+        let actual = SolvePartTwo exampleInput
+        Assert.Equal(24933642, actual)
 
 type Day7(input: string) =
     interface ISolver with
