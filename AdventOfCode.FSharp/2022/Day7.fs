@@ -2,49 +2,51 @@
 
 open AdventOfCode.Core
 open AdventOfCode.FSharp
-open System;
 open Xunit
 
 module Day7 =
-    let PathFor cwd = "/" + (Seq.rev >> String.concat "/") cwd
+    let PathFor cwd = (Seq.rev >> String.concat "/") cwd
 
-    let Read (cwd, items) = 
+    (*
+
+      cd /       []                       [/]          [0]
+      cd foo     []                       [/; foo]     [0; 0]
+      a.txt 100  []                       [/; foo]     [100; 100]
+      b.txt  50  []                       [/; foo]     [150; 150]
+      cd ..      [foo=150]                [/]          [150]
+      cd bar     [foo=150]                [/; bar]     [150; 0]
+      c.txt 25   [foo=150]                [/; bar]     [175; 25]
+      **         [foo=150,bar=25]         [/]          [175]
+      **         [foo=150,bar=25,/=175]   []           []
+
+    *)
+
+    let Read (output, cwd, sizes) = 
         Shared.SplitBy " " >> function 
-        | [| "$"; "cd"; "/" |] -> []            , items
-        | [| "$"; "cd"; ".."|] -> List.tail cwd , items
-        | [| "$"; "cd"; dir |] -> dir :: cwd    , items
-        | [| "$"; "ls" |]      -> cwd           , items
-        | [| "dir"; folder |]  -> cwd           , (PathFor cwd, 0, folder) :: items
-        | [| size; file |]     -> cwd           , (PathFor cwd, int size, file) :: items
-        | _                    -> cwd           , items
+        | [| "$"; "cd"; ".."|] -> (PathFor cwd, List.head sizes) :: output, List.tail cwd, List.tail sizes
+        | [| "$"; "cd"; dir |] -> output, dir :: cwd, 0 :: sizes
+        | [| "$"; _ |]         -> output, cwd, sizes
+        | [| "dir"; _ |]       -> output, cwd, sizes
+        | [| size; file |]     -> output, cwd, List.map ((+) (int size)) sizes
+        | _                    -> output, cwd, sizes
+
+    let rec FinalizeRead = function
+        | (output, cwd, size :: sizes) -> FinalizeRead ((PathFor cwd, size) :: output, List.tail cwd, sizes)
+        | (output, cwd, []) -> output
 
     let Parse =
         Shared.Split
-        >> Seq.fold Read ([], [])
-        >> snd
+        >> Array.fold Read ([], [], [])
+        >> FinalizeRead
 
-    let Path (path, _, _)= path
-
-    let Size (_, size, _) = size
-
-    let PathMatches (cwd : string) (path : string, _, _) = path.StartsWith(cwd)
-
-    let DirectorySizes files = 
-        files 
-        |> Seq.map Path 
-        |> Seq.distinct
-        |> Seq.map (fun path -> path, files |> Seq.filter (PathMatches path) |> Seq.sumBy Size)
-
-    let Solve input = 
-        let files = Parse input
-        DirectorySizes files 
-         |> Seq.map snd
-         |> Seq.filter ((>) 100000)
-         |> Seq.sum
+    let Solve input =
+        Parse input
+        |> Seq.map snd
+        |> Seq.filter ((>) 100000)
+        |> Seq.sum
 
     let SolvePartTwo input =
-        let files = Parse input
-        let sizes = DirectorySizes files 
+        let sizes = Parse input
         let freespace = 70000000 - (dict sizes)["/"]
 
         sizes
@@ -80,25 +82,11 @@ $ ls
 "
     [<Fact>]
     let ``Parses example input`` () =
-        let items = Parse exampleInput |> Seq.filter (fun (p, s, f) -> s > 0) |> Seq.rev |> Seq.toArray
-        Assert.Equal(("/"   , 14848514, "b.txt"), items[0])
-        Assert.Equal(("/"   ,  8504156, "c.dat"), items[1])
-        Assert.Equal(("/a"  ,    29116, "f"    ), items[2])
-        Assert.Equal(("/a"  ,     2557, "g"    ), items[3])
-        Assert.Equal(("/a"  ,    62596, "h.lst"), items[4])
-        Assert.Equal(("/a/e",      584, "i"    ), items[5])
-        Assert.Equal(("/d"  ,  4060174, "j"    ), items[6])
-        Assert.Equal(("/d"  ,  8033020, "d.log"), items[7])
-        Assert.Equal(("/d"  ,  5626152, "d.ext"), items[8])
-        Assert.Equal(("/d"  ,  7214296, "k"    ), items[9])
-
-    [<Fact>]
-    let ``Calculates sizes for example input`` () =
-        let items = Parse exampleInput |> DirectorySizes |> Seq.sortBy fst |> Seq.toArray
+        let items = Parse exampleInput |> Seq.sortBy fst |> Seq.toArray
         Assert.Equal(("/"   , 48381165), items[0])
-        Assert.Equal(("/a"  ,    94853), items[1])
-        Assert.Equal(("/a/e",      584), items[2])
-        Assert.Equal(("/d"  , 24933642), items[3])
+        Assert.Equal(("//a"  ,    94853), items[1])
+        Assert.Equal(("//a/e",      584), items[2])
+        Assert.Equal(("//d"  , 24933642), items[3])
 
 
     [<Fact>]
