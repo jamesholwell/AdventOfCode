@@ -46,7 +46,68 @@ public class Day8 : Solver {
         return max;
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        var scenicScores = Enumerable.Range(0, h).Select(i => new int[w]).ToArray();
+
+        for (var y = 1; y < h - 1; y++) {
+            for (var x = 1; x < w - 1; ++x) {
+                scenicScores[y][x] = ScenicScore(x, y);
+            }
+        }
+
+        return scenicScores.SelectMany(vr => vr).Max();
+    }
+
+    private int ScenicScore(int x0, int y0) {
+        var threshold = map[y0][x0];
+        var accumulator = 0;
+        var score = 1;
+        
+        // up
+        for (var y = y0 - 1; y >= 0; --y) {
+            accumulator++;
+            
+            if (map[y][x0] >= threshold)
+                break;
+        }
+
+        score *= accumulator;
+        accumulator = 0;
+
+        // down
+        for (var y = y0 + 1; y < h; ++y) {
+            accumulator++;
+            
+            if (map[y][x0] >= threshold)
+                break;
+        }
+
+        score *= accumulator;
+        accumulator = 0;
+
+        // left
+        for (var x = x0 - 1; x >= 0; --x) {
+            accumulator++;
+
+            if (map[y0][x] >= threshold)
+                break;
+        }
+
+        score *= accumulator;
+        accumulator = 0;
+
+        // right
+        for (var x = x0 + 1; x < w; ++x) {
+            accumulator++;
+
+            if (map[y0][x] >= threshold)
+                break;
+        }
+
+        score *= accumulator;
+
+        return score;
+    }
 
     private const string? ExampleInput = @"
 30373
@@ -60,5 +121,10 @@ public class Day8 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day8(ExampleInput).SolvePartOne();
         Assert.Equal(21, actual);
+    }
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day8(ExampleInput).SolvePartTwo();
+        Assert.Equal(8, actual);
     }
 }
