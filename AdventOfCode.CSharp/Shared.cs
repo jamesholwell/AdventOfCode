@@ -5,7 +5,7 @@ public static class Shared {
         s.Replace("\r\n", "\n").Trim('\n').Split(b);
 
     public static string[] Split(this string s) =>
-        s.Split("\n");
+        s.SplitBy("\n");
 
-    public static int[] SplitInt(this string s) => s.Split().Select(int.Parse).ToArray();
+    public static int[] SplitInt(this string s) => Shared.Split(s).Select(int.Parse).ToArray();
 }
