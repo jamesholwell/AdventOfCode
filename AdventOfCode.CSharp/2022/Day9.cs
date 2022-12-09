@@ -83,6 +83,56 @@ public class Day9 : Solver {
         return tailHistory.Distinct().Count();
     }
 
+    public override long SolvePartTwo() {
+        var rope = Enumerable.Range(0, 10).Select(i => new IntPoint()).ToArray();
+
+        RememberTheTail(rope[9]);
+
+        foreach (var instruction in Shared.Split(Input)) {
+            var direction = instruction[0];
+            var steps = int.Parse(instruction.Substring(1).Trim());
+
+            for (var i = 0; i < steps; ++i) {
+                // take head step
+                switch (direction) {
+                    case 'U': rope[0].Y++; break;
+                    case 'D': rope[0].Y--; break;
+                    case 'L': rope[0].X--; break;
+                    case 'R': rope[0].X++; break;
+                }
+
+                for (var k = 0; k < 9; k ++) {
+                    // take tail step
+                    var h = rope[k];
+                    var t = rope[k + 1];
+                    var z = Math.Max(Math.Abs(h.X - t.X), Math.Abs(h.Y - t.Y)) > 1 ? 0 : 1;
+                    if (h.X - t.X > z) rope[k + 1].X++;
+                    if (h.Y - t.Y > z) rope[k + 1].Y++;
+                    if (t.X - h.X > z) rope[k + 1].X--;
+                    if (t.Y - h.Y > z) rope[k + 1].Y--;
+                }
+                //DrawMap(h, t, direction, steps, i);
+                RememberTheTail(rope[9]);
+            }
+        }
+
+        //DrawMap(h, t);
+
+        //var minX = tailHistory.Min(t => t.Item1);
+        //var maxX = tailHistory.Max(t => t.Item1);
+        //var minY = tailHistory.Min(t => t.Item2);
+        //var maxY = tailHistory.Max(t => t.Item2);
+        //Console.WriteLine($"Grid {minX}-{maxX} wide by {minY}-{maxY} high");
+
+        //mapWidth = (maxX - minX) / 2;
+        //mapHeight = (maxY - minY) / 2;
+        //mapX = minX + mapWidth;
+        //mapY = minY + mapHeight;
+        //DrawMap(h, t);
+
+        return tailHistory.Distinct().Count();
+    }
+
     private void RememberTheTail(IntPoint t) {
         tailHistory.Add(t.AsTuple());
     }
