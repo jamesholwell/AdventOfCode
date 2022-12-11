@@ -12,16 +12,23 @@ public class Day11 : Solver {
     //public Day11(string? input = null, ITestOutputHelper? io = null) : base(input) {
     //    this.io = io;
     //}
-    
-    public override long SolvePartOne() {
+    public override long SolvePartOne() => Solve(GetExampleMonkeys().ToArray(), 20, divisor: 3);
+
+    public override long SolvePartTwo() {
         var monkeys = GetRealMonkeys().ToArray();
+        var modulus = monkeys.Aggregate(1, (acc, charge) => acc * charge.Divisor);
 
-        for (var i = 0; i < 20; ++i)
+        return Solve(monkeys, 10000, modulus: modulus);
+    }
+
+
+    private long Solve(Monkey[] monkeys, int turns, int divisor = 1, int modulus = int.MaxValue) {
+        for (var i = 0; i < turns; ++i)
             foreach(var monkey in monkeys)
-                monkey.TakeTurn(monkeys);
+                monkey.TakeTurn(monkeys, divisor, modulus);
 
 
-        return monkeys.OrderByDescending(m => m.Inspections).Take(2).Aggregate(1, (acc, charge) => acc * charge.Inspections);
+        return monkeys.OrderByDescending(m => m.Inspections).Take(2).Aggregate(1L, (acc, charge) => checked(acc * charge.Inspections));
     }
 
     private const string? ExampleInput = @"
@@ -53,77 +60,104 @@ Monkey 3:
     If true: throw to monkey 0
     If false: throw to monkey 1
 ";
-
     private IEnumerable<Monkey> GetExampleMonkeys() {
         yield return new Monkey(79, 98) {
-            Operation = i => i * 19,
-            Test = i => i % 23 == 0 ? 2 : 3
+            OperationMul = 19,
+            Divisor = 23,
+            DestinationIfDivisible = 2,
+            DestinationIfNot = 3
         };
 
         yield return new Monkey(54, 65, 75, 74) {
-            Operation = i => i + 6,
-            Test = i => i % 19 == 0 ? 2 : 0 
+            OperationAdd = 6,
+            Divisor = 19,
+            DestinationIfDivisible = 2,
+            DestinationIfNot = 0
         };
 
         yield return new Monkey(79, 60, 97) {
-            Operation = i => i * i,
-            Test = i => i % 13 == 0 ? 1 : 3
+            Divisor = 13,
+            DestinationIfDivisible = 1,
+            DestinationIfNot = 3
         };
 
         yield return new Monkey(74) {
-            Operation = i => i + 3,
-            Test = i => i % 17 == 0 ? 0 : 1
+            OperationAdd = 3,
+            Divisor = 17,
+            DestinationIfDivisible = 0,
+            DestinationIfNot = 1
         };
     }
 
     private IEnumerable<Monkey> GetRealMonkeys() {
         yield return new Monkey(98, 97, 98, 55, 56, 72) {
-            Operation = i => i * 13,
-            Test = i => 0 == i % 11 ? 4 : 7
+            OperationMul = 13,
+            Divisor = 11,
+            DestinationIfDivisible = 4,
+            DestinationIfNot = 7
         };
 
         yield return new Monkey(73, 99, 55, 54, 88, 50, 55) {
-            Operation = i => i + 4,
-            Test = i => 0 == i % 17 ? 2 : 6
+            OperationAdd = 4,
+            Divisor = 17,
+            DestinationIfDivisible = 2,
+            DestinationIfNot = 6
         };
 
         yield return new Monkey(67, 98) {
-            Operation = i => i * 11,
-            Test = i => 0 == i % 5 ? 6 : 5
+            OperationMul = 11,
+            Divisor = 5,
+            DestinationIfDivisible = 6,
+            DestinationIfNot = 5
         };
 
         yield return new Monkey(82, 91, 92, 53, 99) {
-            Operation = i => i + 8,
-            Test = i => 0 == i % 13 ? 1 : 2
+            OperationAdd = 8,
+            Divisor = 13,
+            DestinationIfDivisible = 1,
+            DestinationIfNot = 2
         };
 
         yield return new Monkey(52, 62, 94, 96, 52, 87, 53, 60) {
-            Operation = i => i * i,
-            Test = i => 0 == i % 19 ? 3 : 1
+            Divisor = 19,
+            DestinationIfDivisible = 3,
+            DestinationIfNot = 1
         };
 
         yield return new Monkey(94, 80, 84, 79) {
-            Operation = i => i + 5,
-            Test = i => 0 == i % 2 ? 7 : 0
+            OperationAdd = 5,
+            Divisor = 2,
+            DestinationIfDivisible = 7,
+            DestinationIfNot = 0
         };
 
         yield return new Monkey(89) {
-            Operation = i => i + 1,
-            Test = i => 0 == i % 3 ? 0 : 5
+            OperationAdd = 1,
+            Divisor = 3,
+            DestinationIfDivisible = 0,
+            DestinationIfNot = 5
         };
 
         yield return new Monkey(70, 59, 63) {
-            Operation = i => i + 3,
-            Test = i => 0 == i % 7 ? 4 : 3
+            OperationAdd = 3,
+            Divisor = 7,
+            DestinationIfDivisible = 4,
+            DestinationIfNot = 3
         };
     }
 
     internal class Monkey {
-        private readonly Queue<int> items = new();
+        private readonly Queue<long> items = new();
 
-        public Func<int, int>? Operation { private get; init; }
+        public int? OperationAdd { get; init; }
 
-        public Func<int, int>? Test { private get; init; }
+        public int? OperationMul { get; init; }
+
+        public int Divisor { get; init; }
+
+        public int DestinationIfDivisible { get; init; }
+
+        public int DestinationIfNot { get; init; }
 
         public int Inspections { get; private set; }
 
@@ -132,15 +166,21 @@ Monkey 3:
                 items.Enqueue(item);
         }
 
-        public void TakeTurn(Monkey[] monkeys) {
+        public void TakeTurn(Monkey[] monkeys, int divisor, int modulus) {
             while (items.TryDequeue(out var item)) {
-                Inspections++;
-                var w = Operation!(item) / 3;
-                monkeys[Test!(w)].Enqueue(w);
+                Inspections = checked(Inspections + 1);
+
+                var m = OperationAdd.HasValue ? 1 : OperationMul ?? item;
+                var c = OperationAdd ?? 0;
+
+                var newWorryLevel =
+                    checked(((m * (item + c)) / divisor) % modulus);
+
+                monkeys[newWorryLevel % Divisor == 0 ? DestinationIfDivisible : DestinationIfNot].Enqueue(newWorryLevel);
             }
         }
 
-        private void Enqueue(int i) {
+        private void Enqueue(long i) {
             items.Enqueue(i);
         }
     }
@@ -149,5 +189,12 @@ Monkey 3:
     public void SolvesPartOneExample() {
         var actual = new Day11(ExampleInput).SolvePartOne();
         Assert.Equal(10605, actual);
+    }
+
+
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day11(ExampleInput).SolvePartTwo();
+        Assert.Equal(2713310158, actual);
     }
 }
