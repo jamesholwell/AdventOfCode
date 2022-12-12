@@ -22,17 +22,22 @@ public class Day12 : Solver {
     public override long SolvePartOne() {
         var lines = Shared.Split(Input);
 
-        elevations = lines.SelectMany((l, y) => l.Trim().ToCharArray().Select((c, x) =>
-            new KeyValuePair<Tuple<int, int>, int>(Tuple.Create(x, y),
-                c == 'S' ? -1 : c == 'E' ? 1 + 'z' - 'a' : (int) c - (int) 'a'))).ToDictionary(p => p.Key, p => p.Value);
+        var map = lines.SelectMany((l, y) => l.Trim().ToCharArray().Select((c, x) =>
+            new KeyValuePair<Tuple<int, int>, char>(Tuple.Create(x, y), c))).ToArray();
+
+        elevations = map.Select(p => 
+            new KeyValuePair<Tuple<int, int>, int>(p.Key,
+                p.Value == 'S' ? 0 : p.Value == 'E' ? 'z' - 'a' : (int) p.Value - (int) 'a')).ToDictionary(p => p.Key, p => p.Value);
 
         var height = lines.Length;
         var width = lines[0].Length;
 
         unvisited = elevations.ToDictionary(p => p.Key, p => int.MaxValue);
         tentative = elevations.ToDictionary(p => p.Key, p => int.MaxValue);
-        unvisited[elevations.Single(e => e.Value == -1).Key] = 0;
-        tentative[elevations.Single(e => e.Value == -1).Key] = 0;
+        var start = map.Single(m => m.Value == 'S').Key;
+        var end = map.Single(m => m.Value == 'E').Key;
+        unvisited[start] = 0;
+        tentative[start] = 0;
 
         while (unvisited.Any()) {
             var current = unvisited.MinBy(p => p.Value).Key;
@@ -60,7 +65,7 @@ public class Day12 : Solver {
             unvisited.Remove(current);
         }
 
-        return tentative[elevations.Single(e => e.Value == 1 + 'z' - 'a').Key]        ;
+        return tentative[end]        ;
     }
 
     private void Visit(Tuple<int, int> current, Tuple<int, int> prospect) {
