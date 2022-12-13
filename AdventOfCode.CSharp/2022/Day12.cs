@@ -73,8 +73,9 @@ public class Day12 : Solver {
         var isUnvisited = unvisited.ContainsKey(prospect);
 
         if (isConnected && isUnvisited && tentative[current] < tentative[prospect]) {
-            unvisited[prospect] = tentative[current] + 1;
-            tentative[prospect] = tentative[current] + 1;
+            var i = elevations[prospect] == 0 ? 0 : 1;
+            unvisited[prospect] = tentative[current] + i;
+            tentative[prospect] = tentative[current] + i;
         }
     }
 
