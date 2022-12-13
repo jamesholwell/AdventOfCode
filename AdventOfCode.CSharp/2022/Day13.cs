@@ -11,6 +11,25 @@ public class Day13 : Solver {
     public override long SolvePartOne() => 
         Parse(Input).Select((x, i) => IsOrdered(x[0], x[1]) == true ? 1 + i : 0).Sum();
 
+    public override long SolvePartTwo() {
+        var originalPackets = Shared.Split(Input).Where(s => !string.IsNullOrWhiteSpace(s)).Select(Tokenise).ToArray();
+        var divider1 = Tokenise("[[2]]");
+        var divider2 = Tokenise("[[6]]");
+        var packets = originalPackets.Concat(new[] {divider1, divider2}).ToArray();
+
+        Array.Sort(packets, Compare);
+
+        return (1 + Array.IndexOf(packets, divider1)) * (1 + Array.IndexOf(packets, divider2));
+    }
+
+    private int Compare(Token x, Token y) {
+        return IsOrdered(x, y) switch {
+            true => -1,
+            false => 1,
+            null => 0
+        };
+    }
+
     private bool? IsOrdered(string left, string right) => IsOrdered(Tokenise(left), Tokenise(right));
 
     private bool? IsOrdered(Token left, Token right) {
@@ -102,8 +121,6 @@ public class Day13 : Solver {
         throw new InvalidOperationException("Fell off bottom of stack");
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
-
     private const string? ExampleInput = @"
 [1,1,3,1,1]
 [1,1,5,1,1]
@@ -179,5 +196,11 @@ public class Day13 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day13(ExampleInput).SolvePartOne();
         Assert.Equal(13, actual);
+    }
+
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day13(ExampleInput).SolvePartTwo();
+        Assert.Equal(140, actual);
     }
 }
