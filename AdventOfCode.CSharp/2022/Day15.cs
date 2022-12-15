@@ -7,11 +7,11 @@ namespace AdventOfCode.CSharp._2022;
 public class Day15 : Solver {
     private ITestOutputHelper io;
 
-    public Day15(ITestOutputHelper io, string? input = null) : base(input) {
-        this.io = io;
-    }
+    //public Day15(ITestOutputHelper io, string? input = null) : base(input) {
+    //    this.io = io;
+    //}
 
-    //public Day15(string? input = null) : base(input) { }
+    public Day15(string? input = null) : base(input) { }
 
     private class Sensor {
         private readonly Tuple<int, int> position;
@@ -52,9 +52,11 @@ public class Day15 : Solver {
         return Tuple.Create(int.Parse(parts[0].Substring("x=".Length)), int.Parse(parts[1].Substring("y=".Length)));
     }
 
-    public override long SolvePartOne() => Solve(2000000);
+    public override long SolvePartOne() => SolvePartOneInner(2000000);
 
-    public long Solve(int height) {
+    public override long SolvePartTwo() => SolvePartTwoInner(4000000);
+
+    public long SolvePartOneInner(int height) {
         var sensors = Parse();
 
         DrawMap(sensors);
@@ -73,22 +75,38 @@ public class Day15 : Solver {
         return coveredSpaces;
     }
 
-    private void DrawMap(Sensor[] sensors) {
+    public long SolvePartTwoInner(int max) {
+        var sensors = Parse();
+
+        for (var y = 0; y < max; ++y) {
+            if (y % 1000 == 0) Console.WriteLine($"y = {y}");
+            var exclusions = sensors.Select(p => p.ExclusionRangeAtHeight(y)).Where(r => r != null)
+                .Cast<Tuple<int, int>>().ToArray();
+
+            for (var x = 0; x < max; ++x) {
+                if (!exclusions.Any(e => e.Item1 <= x && x <= e.Item2))
+                    return 4000000 * x + y;
+            }
+        }
+
+        return 0;
+    }
+
+    private void DrawMap(Sensor[] sensors, int maxX = 20, int maxY = 20) {
         for (var y = -2; y < 22; ++y) {
             var exclusions = sensors.Select(p => p.ExclusionRangeAtHeight(y)).Where(r => r != null).Cast<Tuple<int, int>>()
                 .ToArray();
 
-            var buffer = new char[31];
+            var buffer = new string(' ', 31).ToCharArray();
 
             for (var x = -5; x < 26; ++x) {
+                if (x < 0 || x > maxX || y < 0 || y > maxY) continue;
                 buffer[5 + x] = exclusions.Any(e => e.Item1 <= x && x <= e.Item2) ? '#' : '.';
             }
 
             io.WriteLine(new string(buffer));
         }
     }
-
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
 
     private const string? ExampleInput = @"
 Sensor at x=2, y=18: closest beacon is at x=-2, y=15
@@ -109,13 +127,13 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3
 
     [Fact]
     public void SolvesPartOneExample() {
-        var actual = new Day15(io, ExampleInput).Solve(10);
+        var actual = new Day15(ExampleInput).SolvePartOneInner(10);
         Assert.Equal(26, actual);
     }
 
     [Fact]
     public void SolvesPartTwoExample() {
-        var actual = new Day15(io, ExampleInput).Solve(10);
+        var actual = new Day15(ExampleInput).SolvePartTwoInner(20);
         Assert.Equal(56000011, actual);
     }
 }
