@@ -59,7 +59,7 @@ public class Day15 : Solver {
     public long SolvePartOneInner(int height) {
         var sensors = Parse();
 
-        DrawMap(sensors);
+        //DrawMap(sensors);
 
         var exclusions = sensors.Select(p => p.ExclusionRangeAtHeight(height)).Where(r => r != null)
             .Cast<Tuple<int, int>>().ToArray();
@@ -79,17 +79,34 @@ public class Day15 : Solver {
         var sensors = Parse();
 
         for (var y = 0; y < max; ++y) {
-            if (y % 1000 == 0) Console.WriteLine($"y = {y}");
+            if (y % 100000 == 0) Console.WriteLine($"y = {y}");
             var exclusions = sensors.Select(p => p.ExclusionRangeAtHeight(y)).Where(r => r != null)
                 .Cast<Tuple<int, int>>().ToArray();
 
+            var range = new[] { Tuple.Create(0, max) };
+
+            foreach (var e in exclusions) {
+                range = range.SelectMany(r => Subtract(r, e)).ToArray();
+                if (range.Length == 0) break;
+            }
+
+            if (range.Length == 0) continue;
+
             for (var x = 0; x < max; ++x) {
                 if (!exclusions.Any(e => e.Item1 <= x && x <= e.Item2))
-                    return 4000000 * x + y;
+                    return 4000000L * x + y;
             }
         }
 
         return 0;
+    }
+
+    private IEnumerable<Tuple<int, int>> Subtract(Tuple<int, int> a, Tuple<int, int> b) {
+        if (a.Item1 < b.Item1)
+            yield return Tuple.Create(a.Item1, Math.Min(a.Item2, b.Item1));
+
+        if (b.Item2 < a.Item2)
+            yield return Tuple.Create(Math.Max(a.Item1, b.Item2 + 1), a.Item2);
     }
 
     private void DrawMap(Sensor[] sensors, int maxX = 20, int maxY = 20) {
