@@ -111,60 +111,55 @@ public class Day16 : Solver {
             this.TimeLeftOne = timeLeftOne;
             this.TimeLeftTwo = timeLeftTwo;
 
-            this.TotalPressureRelease = OpenedValves.Select(p => p.Key.FlowRate * p.Value).Sum();
+            int sum = 0;
+            foreach (var p in OpenedValves) sum += p.Key.FlowRate * p.Value;
+
+            this.TotalPressureRelease = sum;
 
             var t1 = TimeLeftOne;
             var v1 = CurrentValveOne;
             var t2 = TimeLeftTwo;
             var v2 = CurrentValveTwo;
-            this.UpperBoundTotalPressureRelease =
-                TotalPressureRelease + 
-                InterestingValves
-                    .Where(valve => !openedValves.ContainsKey(valve))
-                    .Sum(valve => Math.Max(0, Math.Max(t1 - v1.Distances[valve] - 1, t2 - v2.Distances[valve] - 1)) * valve.FlowRate);
+            for (var index = 0; index < InterestingValves.Length; index++) {
+                var valve = InterestingValves[index];
+                if (!openedValves.ContainsKey(valve))
+                    sum += Math.Max(0, Math.Max(t1 - v1.Distances[valve] - 1, t2 - v2.Distances[valve] - 1)) * valve.FlowRate;
+            }
+
+            this.UpperBoundTotalPressureRelease = sum;
         }
 
         public IEnumerable<(Valve nextOne, int distanceOne, int remainOne, Valve nextTwo, int distanceTwo, int remainTwo)> Options {
             get {
-                var visitedValves = OpenedValves;
-                var currentOne = CurrentValveOne;
-                var currentTwo = CurrentValveTwo;
-                var maxDistanceOne = TimeLeftOne;
-                var maxDistanceTwo = TimeLeftTwo;
+                var ro1 = 0;
+                var ro2 = 0;
 
-                var optionsOne = CurrentValveOne.Distances.Where(p => !visitedValves.ContainsKey(p.Key) && p.Value < maxDistanceOne).ToArray();
-                var optionsTwo = CurrentValveTwo.Distances.Where(p => !visitedValves.ContainsKey(p.Key) && p.Value < maxDistanceTwo).ToArray();
+                var irs = new List<(Valve nextOne, int distanceOne, Valve nextTwo, int distanceTwo)>();
 
-                if (optionsOne.Length == 1 && optionsTwo.Length == 1) {
-                    var left = optionsOne.Single();
-                    var right = optionsTwo.Single();
-                    if (left.Key == right.Key) {
-                        if (left.Value < right.Value) {
-                            optionsTwo = Array.Empty<KeyValuePair<Valve, int>>();
-                        }
-                        else {
-                            optionsOne = Array.Empty<KeyValuePair<Valve, int>>();
-                        }
+                foreach (var op1 in CurrentValveOne.Distances) {
+                    if (op1.Value > TimeLeftOne - 2 || OpenedValves.ContainsKey(op1.Key)) continue;
+                    ro1++;
+
+                    foreach (var op2 in CurrentValveTwo.Distances) {
+                        if (op2.Value > TimeLeftTwo - 2 || op2.Key == op1.Key || OpenedValves.ContainsKey(op2.Key)) continue;
+                        if (ro1 == 1) ro2++;
+
+                        irs.Add((op1.Key, op1.Value, op2.Key, op2.Value));
                     }
+
+                    if (ro2 == 0)
+                        irs.Add((op1.Key, op1.Value, CurrentValveTwo, 0));
+                }
+                
+                var rs = new (Valve nextOne, int distanceOne, int remainOne, Valve nextTwo, int distanceTwo, int remainTwo)[irs.Count];
+                for (var i = 0; i < irs.Count; i++) {
+                    var (n1, d1, n2, d2) = irs[i];
+                    rs[i] = (n1, d1, ro1, n2, d2, ro2);
                 }
 
-                if (optionsOne.Any() && optionsTwo.Any())
-                    return 
-                        from op1 in optionsOne
-                        from op2 in optionsTwo
-                        where op1.Key != op2.Key
-                        select (op1.Key, op1.Value, optionsOne.Length - 1, op2.Key, op2.Value, optionsTwo.Length - 1);
-
-                if (!optionsTwo.Any())
-                    return optionsOne.Select(op1 => (op1.Key, op1.Value, optionsOne.Length - 1, currentTwo, 0, 0));
-
-                if (!optionsOne.Any())
-                    return optionsTwo.Select(op2 => (currentOne, 0, 0, op2.Key, op2.Value, optionsTwo.Length - 1));
-
-                throw new InvalidOperationException("No options available");
+                return rs;
             }
         }
-
     }
 
     public override long SolvePartOne() {
@@ -221,8 +216,6 @@ public class Day16 : Solver {
             var newlySeenScenarios = new ConcurrentBag<TwoPlayerScenario>();
 
             scenarios.AsParallel()
-                .WithDegreeOfParallelism(8)
-                .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                 .SelectMany(scenario => scenario.Options.Select(op => (scenario, op)))
                 .ForAll(pair => {
                     var (scenario, op) = pair;
