@@ -6,9 +6,9 @@ using Xunit.Abstractions;
 namespace AdventOfCode.CSharp._2022;
 
 public class Day16 : Solver {
-    private readonly ITestOutputHelper io;
+    private readonly ITestOutputHelper? io;
 
-    private static Valve[] InterestingValves;
+    private static Valve[] interestingValves;
 
     public Day16(string? input = null) : base(input) { }
 
@@ -16,7 +16,7 @@ public class Day16 : Solver {
     //    this.io = io;
     //}
 
-    private class Valve {
+    private sealed class Valve {
         public string Label { get; }
 
         public int FlowRate { get; }
@@ -120,45 +120,13 @@ public class Day16 : Solver {
             var v1 = CurrentValveOne;
             var t2 = TimeLeftTwo;
             var v2 = CurrentValveTwo;
-            for (var index = 0; index < InterestingValves.Length; index++) {
-                var valve = InterestingValves[index];
+            for (var index = 0; index < interestingValves.Length; index++) {
+                var valve = interestingValves[index];
                 if (!openedValves.ContainsKey(valve))
                     sum += Math.Max(0, Math.Max(t1 - v1.Distances[valve] - 1, t2 - v2.Distances[valve] - 1)) * valve.FlowRate;
             }
 
             this.UpperBoundTotalPressureRelease = sum;
-        }
-
-        public IEnumerable<(Valve nextOne, int distanceOne, int remainOne, Valve nextTwo, int distanceTwo, int remainTwo)> Options {
-            get {
-                var ro1 = 0;
-                var ro2 = 0;
-
-                var irs = new List<(Valve nextOne, int distanceOne, Valve nextTwo, int distanceTwo)>();
-
-                foreach (var op1 in CurrentValveOne.Distances) {
-                    if (op1.Value > TimeLeftOne - 2 || OpenedValves.ContainsKey(op1.Key)) continue;
-                    ro1++;
-
-                    foreach (var op2 in CurrentValveTwo.Distances) {
-                        if (op2.Value > TimeLeftTwo - 2 || op2.Key == op1.Key || OpenedValves.ContainsKey(op2.Key)) continue;
-                        if (ro1 == 1) ro2++;
-
-                        irs.Add((op1.Key, op1.Value, op2.Key, op2.Value));
-                    }
-
-                    if (ro2 == 0)
-                        irs.Add((op1.Key, op1.Value, CurrentValveTwo, 0));
-                }
-                
-                var rs = new (Valve nextOne, int distanceOne, int remainOne, Valve nextTwo, int distanceTwo, int remainTwo)[irs.Count];
-                for (var i = 0; i < irs.Count; i++) {
-                    var (n1, d1, n2, d2) = irs[i];
-                    rs[i] = (n1, d1, ro1, n2, d2, ro2);
-                }
-
-                return rs;
-            }
         }
     }
 
@@ -200,67 +168,76 @@ public class Day16 : Solver {
 
     public override long SolvePartTwo() {
         var valves = InitializeValves();
-        InterestingValves = valves.Where(v => v.FlowRate > 0).ToArray();
+        interestingValves = valves.Where(v => v.FlowRate > 0).ToArray();
 
         var i = 0;
         
         var currentValve = valves.Single(v => v.Label == "AA");
         var initialScenario = new TwoPlayerScenario(currentValve, currentValve, new Dictionary<Valve, int> { { currentValve, 0 } }, 26, 26);
         var scenarios = new[] { initialScenario };
-        var seenScenarios = new[] { initialScenario };
+        int lowerBound = 0;
 
         while (scenarios.Any()) {
             Console.WriteLine($"Pass {++i} with {scenarios.Length} scenarios to evaluate");
 
-            var nextScenarios = new ConcurrentBag<TwoPlayerScenario>();
             var newlySeenScenarios = new ConcurrentBag<TwoPlayerScenario>();
 
             scenarios.AsParallel()
-                .SelectMany(scenario => scenario.Options.Select(op => (scenario, op)))
-                .ForAll(pair => {
-                    var (scenario, op) = pair;
-                    var visitedNodes = scenario.OpenedValves.ToDictionary(p => p.Key, p => p.Value);
-                    var timeLeftOne = scenario.TimeLeftOne;
-                    var timeLeftTwo = scenario.TimeLeftTwo;
+                .ForAll(scenario => {
+                    var ro2 = 0;
+                    
+                    foreach (var op1 in scenario.CurrentValveOne.Distances) {
+                        if (op1.Value > scenario.TimeLeftOne - 2 || scenario.OpenedValves.ContainsKey(op1.Key)) continue;
 
-                    if (op.nextOne != scenario.CurrentValveOne) {
-                        timeLeftOne -= op.distanceOne + 1;
-                        visitedNodes[op.nextOne] = timeLeftOne;
+                        foreach (var op2 in scenario.CurrentValveTwo.Distances) {
+                            if (op2.Value > scenario.TimeLeftTwo - 2 || op2.Key == op1.Key || scenario.OpenedValves.ContainsKey(op2.Key)) continue;
+                            ro2++;
+
+                            var timeLeftOne = scenario.TimeLeftOne - op1.Value - 1;
+                            var timeLeftTwo = scenario.TimeLeftTwo - op2.Value - 1;
+
+                            var visitedNodes = scenario.OpenedValves.ToDictionary(p => p.Key, p => p.Value);
+                            visitedNodes[op1.Key] = timeLeftOne;
+                            visitedNodes[op2.Key] = timeLeftTwo;
+
+                            var newScenario = new TwoPlayerScenario(
+                                op1.Key,
+                                op2.Key,
+                                visitedNodes,
+                                timeLeftOne,
+                                timeLeftTwo);
+
+                            newlySeenScenarios.Add(newScenario);
+                        }
+
+                        if (ro2 == 0) {
+                            var timeLeftOne = scenario.TimeLeftOne - op1.Value - 1;
+
+                            var visitedNodes = scenario.OpenedValves.ToDictionary(p => p.Key, p => p.Value);
+                            visitedNodes[op1.Key] = timeLeftOne;
+
+                            var newScenario = new TwoPlayerScenario(
+                                op1.Key,
+                                scenario.CurrentValveTwo,
+                                visitedNodes,
+                                timeLeftOne,
+                                scenario.TimeLeftTwo);
+
+                            newlySeenScenarios.Add(newScenario);
+                        }
                     }
-
-                    if (op.nextTwo != scenario.CurrentValveTwo) {
-                        timeLeftTwo -= op.distanceTwo + 1;
-                        visitedNodes[op.nextTwo] = timeLeftTwo;
-                    }
-
-                    var newScenario = new TwoPlayerScenario(
-                        op.nextOne,
-                        op.nextTwo,
-                        visitedNodes,
-                        timeLeftOne,
-                        timeLeftTwo);
-
-                    if (op.remainOne > 0 || op.remainTwo > 0)
-                        nextScenarios.Add(newScenario);
-
-                    newlySeenScenarios.Add(newScenario);
                 });
 
             Console.WriteLine($"... done exploring, with {newlySeenScenarios.Count} new scenarios seen");
 
             if (!newlySeenScenarios.Any()) break;
-
-            var lowerBound = newlySeenScenarios.Max(s => s.TotalPressureRelease);
+            lowerBound = newlySeenScenarios.Max(s => s.TotalPressureRelease);
             Console.WriteLine($"... solution lower bound is {lowerBound}");
 
-            scenarios = nextScenarios.Where(ns => ns.UpperBoundTotalPressureRelease >= lowerBound).ToArray();
-            seenScenarios = seenScenarios.Concat(newlySeenScenarios).Where(ns => ns.UpperBoundTotalPressureRelease >= lowerBound).ToArray();
+            scenarios = newlySeenScenarios.Where(ns => ns.UpperBoundTotalPressureRelease >= lowerBound).ToArray();
         }
-        
-        var bestScenario = seenScenarios.MaxBy(s => s.TotalPressureRelease);
 
-        //foreach (var l in bestScenario.OpenedValves.Select(p => $"{p.Key.Label}@{p.Value}"))io.WriteLine(l);
-        return bestScenario.TotalPressureRelease;
+        return lowerBound;
     }
 
     private Valve[] InitializeValves() {
