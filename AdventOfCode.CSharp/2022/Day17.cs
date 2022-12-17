@@ -13,7 +13,7 @@ public class Day17 : Solver {
     //public Day17(ITestOutputHelper io, string? input = null) : base(input) {
     //    this.io = io;
     //}
-    
+
     private abstract class Rock {
         public int x;
 
@@ -198,7 +198,83 @@ public class Day17 : Solver {
         return chamber.Height;
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        var gasJetInput = Input.Trim().Select(c => c == '>' ? 1 : c == '<' ? -1 : throw new ArgumentOutOfRangeException()).ToArray();
+        var gasJetModulus = gasJetInput.Length;
+        using var gasJets = new Utilities.InfiniteCyclingEnumerable<int>(gasJetInput).GetEnumerator();
+        Console.WriteLine($"Gas jet cycle is {gasJetInput.Length}");
+
+        var piecesInput = new Func<Rock>[] { () => new Minus(), () => new Plus(), () => new Ell(), () => new Bar(), () => new Square() };
+        using var pieces = new Utilities.InfiniteCyclingEnumerable<Rock>(piecesInput).GetEnumerator();
+
+        var chamber = new Chamber();
+        var g = 0;
+        var heightIncreases = new List<(int steps, int deltaHeight)>(50);
+        var heightHistory = new List<int>(gasJetModulus * 50);
+        var lastHeight = 0;
+        heightHistory.Add(0);
+
+
+        for (var p = 0; p < gasJetModulus * 1000; ++p) {
+            pieces.MoveNext();
+
+            var r = pieces.Current;
+            r.y = chamber.Height + 3;
+            r.x = 2;
+            
+            while (true) {
+                gasJets.MoveNext();
+
+                if (p % 5 == 0 && ++g % (5 * gasJetModulus) == 0) {
+                    heightIncreases.Add((p, chamber.Height - lastHeight));
+                    Console.WriteLine($"p = {p}; g = {g}; h = {chamber.Height}; dh = {chamber.Height - lastHeight}");
+
+                    lastHeight = chamber.Height;
+                }
+
+                r.TryPush(chamber, gasJets.Current);
+
+                if (r.TryFall(chamber)) 
+                    continue;
+
+                r.CommitPosition(chamber);
+                break;
+            }
+
+            heightHistory.Add(chamber.Height);
+        }
+
+
+        var mostFrequentHeightIncrease = heightIncreases.GroupBy(h => h.deltaHeight).MaxBy(g => g.Count()).Key;
+        var skip = heightIncreases.FindIndex(h => h.deltaHeight == mostFrequentHeightIncrease);
+        var leadIn = heightIncreases[skip].steps;
+        var candidateCycle = heightIncreases.Skip(skip).Select(h => h.deltaHeight).ToArray(); 
+
+        var periodicity = Enumerable.Range(2, 200)
+            .First(i => IsPeriodic(candidateCycle, i));
+
+        var cycleLength = heightIncreases.ElementAt(skip + periodicity).steps - heightIncreases.ElementAt(skip).steps;
+        var cycleHeight = candidateCycle.Take(periodicity).Sum();
+
+        Console.WriteLine($"Detected periodicity {periodicity}, cycle length {cycleLength} with height {cycleHeight} after lead-in {leadIn}");
+
+        var heightOfLeadIn = heightHistory[leadIn];
+        
+        var numberOfCycles = (1000000000000 - leadIn) / cycleLength;
+        var heightOfCycles = (long)cycleHeight * numberOfCycles;
+
+        var residual = (int)((1000000000000 - leadIn) % cycleLength);
+        var heightOfResidual = heightHistory[leadIn + residual] - heightHistory[leadIn];
+
+        Console.WriteLine($"Lead in of {leadIn} = {heightOfLeadIn} then {numberOfCycles}/{cycleLength} * {cycleHeight} = {heightOfCycles} then residual {residual} = {heightOfResidual}");
+        
+        return heightOfLeadIn + heightOfCycles + heightOfResidual;
+    }
+
+    private bool IsPeriodic(ICollection<int> series, int period) {
+        var chunks = series.Take(period * (series.Count / period)).Chunk(period).ToArray();
+        return Enumerable.Range(0, period - 1).All(p => chunks.DistinctBy(c => c[p]).Count() == 1);
+    }
 
     private const string? ExampleInput = @"
 >>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>
@@ -208,6 +284,12 @@ public class Day17 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day17(ExampleInput).SolvePartOne();
         Assert.Equal(3068, actual);
+    }
+
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day17(ExampleInput).SolvePartTwo();
+        Assert.Equal(1514285714288, actual);
     }
 
     private static class Utilities { 
