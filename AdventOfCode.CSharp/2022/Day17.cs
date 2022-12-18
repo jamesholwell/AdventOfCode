@@ -135,6 +135,19 @@ public class Day17 : Solver {
             }
         }
 
+        public string GetTop() {
+            if (Height > 2)
+                return new string(map[Height].Concat(map[Height - 1]).Concat(map[Height-2]).Concat(map[Height - 3]).ToArray());
+
+            if (Height > 1)
+                return new string(map[Height].Concat(map[Height - 1]).Concat(map[Height - 2]).ToArray());
+            
+            if (Height > 0)
+                return new string(map[Height].Concat(map[Height - 1]).ToArray());
+
+            return new string(map[Height]);
+        }
+
         public bool IsEmptySpace(IEnumerable<(int x, int y)> cells) {
             foreach (var (x, y) in cells)
                 if (map[y + 1][x + 1] != '.')
@@ -209,12 +222,12 @@ public class Day17 : Solver {
 
         var chamber = new Chamber();
         var g = 0;
-        var heightIncreases = new List<(int steps, int deltaHeight)>(50);
-        var heightHistory = new List<int>(gasJetModulus * 50);
-        var lastHeight = 0;
-        heightHistory.Add(0);
-
-
+        var heightHistory = new Dictionary<int, int>();
+        var topHistory = new Dictionary<(string, int, int), int>();
+        var leadIn = 0;
+        var cycleLength = 0;
+        var cycleHeight = 0;
+        
         for (var p = 0; p < gasJetModulus * 1000; ++p) {
             pieces.MoveNext();
 
@@ -224,13 +237,7 @@ public class Day17 : Solver {
             
             while (true) {
                 gasJets.MoveNext();
-
-                if (p % 5 == 0 && ++g % (5 * gasJetModulus) == 0) {
-                    heightIncreases.Add((p, chamber.Height - lastHeight));
-                    Console.WriteLine($"p = {p}; g = {g}; h = {chamber.Height}; dh = {chamber.Height - lastHeight}");
-
-                    lastHeight = chamber.Height;
-                }
+                g++;
 
                 r.TryPush(chamber, gasJets.Current);
 
@@ -240,34 +247,47 @@ public class Day17 : Solver {
                 r.CommitPosition(chamber);
                 break;
             }
+            
+            heightHistory[p + 1] = chamber.Height;
 
-            heightHistory.Add(chamber.Height);
+            var k = (chamber.GetTop(), p % 5, g % gasJetModulus);
+
+            if (leadIn > 0) {
+                if (p > leadIn + cycleLength * 2) break;
+            }
+            else if (topHistory.ContainsKey(k) && leadIn == 0) {
+                Console.WriteLine($"Detected loop: {k}");
+                Console.WriteLine($"...step {topHistory[k]} @ height {heightHistory[topHistory[k]]} === step {p} @ height {chamber.Height}");
+
+                leadIn = topHistory[k]; // first 11 pieces are the run up to the cycle
+
+                cycleLength = p - leadIn;
+                cycleHeight = heightHistory[p] - heightHistory[leadIn]; // the "add" for each cycle is the height before the cycle to the height at the end
+
+                Console.WriteLine($"... lead in of {leadIn} followed by cycle of {cycleLength} for rise of {cycleHeight}");
+            }
+            else
+                topHistory.Add(k, p);
+
         }
 
+        for (var i = leadIn + 1; i < heightHistory.Count; i++) {
+            var prediction = PredictionAtHeight(heightHistory, leadIn, cycleLength, cycleHeight, i);
+            Assert.Equal(heightHistory[i], prediction);
+        }
+        
+        return PredictionAtHeight(heightHistory, leadIn, cycleLength, cycleHeight, 1000000000000);
+    }
 
-        var mostFrequentHeightIncrease = heightIncreases.GroupBy(h => h.deltaHeight).MaxBy(g => g.Count()).Key;
-        var skip = heightIncreases.FindIndex(h => h.deltaHeight == mostFrequentHeightIncrease);
-        var leadIn = heightIncreases[skip].steps;
-        var candidateCycle = heightIncreases.Skip(skip).Select(h => h.deltaHeight).ToArray(); 
-
-        var periodicity = Enumerable.Range(2, 200)
-            .First(i => IsPeriodic(candidateCycle, i));
-
-        var cycleLength = heightIncreases.ElementAt(skip + periodicity).steps - heightIncreases.ElementAt(skip).steps;
-        var cycleHeight = candidateCycle.Take(periodicity).Sum();
-
-        Console.WriteLine($"Detected periodicity {periodicity}, cycle length {cycleLength} with height {cycleHeight} after lead-in {leadIn}");
-
+    private static long PredictionAtHeight(Dictionary<int, int> heightHistory, int leadIn, int cycleLength, int cycleHeight, long predictionHeight) {
         var heightOfLeadIn = heightHistory[leadIn];
-        
-        var numberOfCycles = (1000000000000 - leadIn) / cycleLength;
-        var heightOfCycles = (long)cycleHeight * numberOfCycles;
 
-        var residual = (int)((1000000000000 - leadIn) % cycleLength);
-        var heightOfResidual = heightHistory[leadIn + residual] - heightHistory[leadIn];
+        var numberOfCycles = (predictionHeight - leadIn) / cycleLength;
+        var heightOfCycles = (long) cycleHeight * numberOfCycles;
 
-        Console.WriteLine($"Lead in of {leadIn} = {heightOfLeadIn} then {numberOfCycles}/{cycleLength} * {cycleHeight} = {heightOfCycles} then residual {residual} = {heightOfResidual}");
-        
+        var residual = (int) (predictionHeight - leadIn - numberOfCycles * cycleLength);
+        var heightOfResidual = heightHistory[leadIn + cycleLength + residual] - heightHistory[leadIn + cycleLength];
+
         return heightOfLeadIn + heightOfCycles + heightOfResidual;
     }
 
