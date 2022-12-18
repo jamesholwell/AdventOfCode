@@ -1,10 +1,10 @@
-﻿using AdventOfCode.Core;
-using Xunit;
+﻿using Xunit;
+using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp;
 
 public class TemplateSolver : Solver {
-    public TemplateSolver(string? input = null) : base(input) { }
+    public TemplateSolver(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
 
     public override long SolvePartOne() => 0;
 
@@ -16,7 +16,7 @@ foo
 
     [Fact]
     public void SolvesPartOneExample() {
-        var actual = new TemplateSolver(ExampleInput).SolvePartOne();
+        var actual = new TemplateSolver(ExampleInput, Output).SolvePartOne();
         Assert.Equal(0, actual);
     }
 }

@@ -14,7 +14,7 @@ public class SolverFactory {
         var candidates = solvers.Keys.Where(k => k.StartsWith(prefix)).ToArray();
 
         return candidates.Length switch {
-            1 => Activator.CreateInstance(solvers[candidates.Single()], input) as ISolver,
+            1 => Instantiate(solvers[candidates.Single()], input),
             0 => null,
             _ => throw new AmbiguousSolverException(candidates)
         };
@@ -22,7 +22,19 @@ public class SolverFactory {
 
     public IDictionary<string, ISolver> CreateAll(string day, string @event, string input) {
         return solvers.Keys.Where(k => k.StartsWith($"{@event.ToLowerInvariant()}-{day.ToLowerInvariant()}-"))
-            .ToDictionary(k => k, k => (ISolver) Activator.CreateInstance(solvers[k], input)!);
+            .ToDictionary(k => k, k => Instantiate(solvers[k], input));
+    }
+
+    private ISolver Instantiate(Type solver, string input) {
+        var constructor = solver.GetConstructors().First();
+
+        var parameters =
+            constructor.GetParameters()
+                .Select(parameter => parameter.ParameterType == typeof(string) ? input : null)
+                .Cast<object?>()
+                .ToArray();
+
+        return (ISolver)constructor.Invoke(parameters);
     }
 
     public ICollection<string> List() {
