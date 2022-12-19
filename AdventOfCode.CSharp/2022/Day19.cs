@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -113,10 +114,35 @@ public class Day19 : Solver {
             GeodeRobots = geodeRobots;
             TimeLeft = timeLeft;
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Scenario Tick() {
             return new Scenario(Blueprint, Ores + OreRobots, Clays + ClayRobots, Obsidians + ObsidianRobots,
                 Geodes + GeodeRobots, OreRobots, ClayRobots, ObsidianRobots, GeodeRobots, TimeLeft - 1);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Scenario BuildGeodeRobot() {
+            return new Scenario(Blueprint, Ores + OreRobots - Blueprint.GeodeRobotOreCost, Clays + ClayRobots, Obsidians + ObsidianRobots - Blueprint.GeodeRobotObsidianCost,
+                Geodes + GeodeRobots, OreRobots, ClayRobots, ObsidianRobots, GeodeRobots + 1, TimeLeft - 1);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Scenario BuildObsidianRobot() {
+            return new Scenario(Blueprint, Ores + OreRobots - Blueprint.ObsidianRobotOreCost, Clays + ClayRobots - Blueprint.ObsidianRobotClayCost, Obsidians + ObsidianRobots,
+                Geodes + GeodeRobots, OreRobots, ClayRobots, ObsidianRobots + 1, GeodeRobots, TimeLeft - 1);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Scenario BuildClayRobot() {
+            return new Scenario(Blueprint, Ores + OreRobots - Blueprint.ClayRobotOreCost, Clays + ClayRobots, Obsidians + ObsidianRobots,
+                Geodes + GeodeRobots, OreRobots, ClayRobots + 1, ObsidianRobots, GeodeRobots, TimeLeft - 1);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Scenario BuildOreRobot() {
+            return new Scenario(Blueprint, Ores + OreRobots - Blueprint.OreRobotOreCost, Clays + ClayRobots, Obsidians + ObsidianRobots,
+                Geodes + GeodeRobots, OreRobots + 1, ClayRobots, ObsidianRobots, GeodeRobots, TimeLeft - 1);
         }
     }
 
@@ -131,8 +157,44 @@ public class Day19 : Solver {
 
             var newlySeenScenarios = new ConcurrentBag<Scenario>();
 
-            scenarios.AsParallel().ForAll(scenario => {
+            scenarios.AsParallel().ForAll(scenario =>
+            {
+                var blueprint = scenario.Blueprint;
                 if (scenario.TimeLeft <= 0) return;
+                var builtARobot = false;
+
+                // build geode robot
+                if (scenario.Ores >= blueprint.GeodeRobotOreCost &&
+                    scenario.Obsidians >= blueprint.GeodeRobotObsidianCost) {
+                    newlySeenScenarios.Add(scenario.BuildGeodeRobot());
+
+                    // assumption: this is always the best action (?)
+                    return;
+                }
+
+                // build obsidian robot
+                if (scenario.Ores >= blueprint.ObsidianRobotOreCost &&
+                    scenario.Clays >= blueprint.ObsidianRobotClayCost) {
+                    newlySeenScenarios.Add(scenario.BuildObsidianRobot());
+
+                    // assumption: this is always the best action if you don't already have production (?)
+                    if (scenario.Obsidians == 0)
+                        return;
+                }
+                
+                // build clay robot
+                if (scenario.Ores >= blueprint.ClayRobotOreCost && scenario.ClayRobots < 8) {
+                    newlySeenScenarios.Add(scenario.BuildClayRobot());
+
+                    // assumption: this is always the best action if you don't already have production (?)
+                    if (scenario.Clays == 0)
+                        return;
+                }
+
+                // build ore robot
+                if (scenario.Ores >= blueprint.OreRobotOreCost && scenario.OreRobots < 5) {
+                    newlySeenScenarios.Add(scenario.BuildOreRobot());
+                }
 
                 newlySeenScenarios.Add(scenario.Tick());
             });
@@ -149,7 +211,11 @@ public class Day19 : Solver {
                     lowerBounds[scenariosForBlueprint.Key] = max;
             }
         }
-        
+
+        foreach (var blueprint in lowerBounds) {
+            Output.WriteLine($"Blueprnt {blueprint.Key.Id}, geodes {blueprint.Value}");
+        }
+
         return lowerBounds.Sum(b => b.Key.Id * b.Value);
     }
 
