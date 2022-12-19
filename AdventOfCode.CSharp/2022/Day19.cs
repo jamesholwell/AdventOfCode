@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -79,14 +80,77 @@ public class Day19 : Solver {
             $"  Each geode robot costs {GeodeRobotOreCost} ore and {GeodeRobotObsidianCost} obsidian.";
     }
 
+    private readonly struct Scenario {
+        public readonly Blueprint Blueprint;
+
+        public readonly int Ores;
+
+        public readonly int Clays;
+
+        public readonly int Obsidians;
+
+        public readonly int Geodes;
+
+        public readonly int OreRobots;
+
+        public readonly int ClayRobots;
+
+        public readonly int ObsidianRobots;
+
+        public readonly int GeodeRobots;
+
+        public readonly int TimeLeft;
+
+        public Scenario(Blueprint blueprint, int ores, int clays, int obsidians, int geodes, int oreRobots, int clayRobots, int obsidianRobots, int geodeRobots, int timeLeft) {
+            Blueprint = blueprint;
+            Ores = ores;
+            Clays = clays;
+            Obsidians = obsidians;
+            Geodes = geodes;
+            OreRobots = oreRobots;
+            ClayRobots = clayRobots;
+            ObsidianRobots = obsidianRobots;
+            GeodeRobots = geodeRobots;
+            TimeLeft = timeLeft;
+        }
+        
+        public Scenario Tick() {
+            return new Scenario(Blueprint, Ores + OreRobots, Clays + ClayRobots, Obsidians + ObsidianRobots,
+                Geodes + GeodeRobots, OreRobots, ClayRobots, ObsidianRobots, GeodeRobots, TimeLeft - 1);
+        }
+    }
+
     public override long SolvePartOne() {
         var blueprints = ParseBlueprints(Input);
+        var scenarios = blueprints.Select(b => new Scenario(b, 0, 0, 0, 0, 1, 0, 0, 0, 24)).ToArray();
+        var i = 0;
+        var lowerBounds = blueprints.ToDictionary(b => b, _ => 0);
 
-        foreach (var blueprint in blueprints) {
-            Output.WriteLine(blueprint.ToPrettyString());
+        while (scenarios.Any()) {
+            Output.WriteLine($"Pass {++i} with {scenarios.Length} scenarios to evaluate");
+
+            var newlySeenScenarios = new ConcurrentBag<Scenario>();
+
+            scenarios.AsParallel().ForAll(scenario => {
+                if (scenario.TimeLeft <= 0) return;
+
+                newlySeenScenarios.Add(scenario.Tick());
+            });
+            
+            Output.WriteLine($"... done exploring, with {newlySeenScenarios.Count} new scenarios seen");
+
+            scenarios = newlySeenScenarios.ToArray();
+
+            // write out lower bounds
+            foreach (var scenariosForBlueprint in scenarios.GroupBy(b => b.Blueprint)) {
+                var max = scenariosForBlueprint.Max(s => s.Geodes);
+
+                if (max > lowerBounds[scenariosForBlueprint.Key])
+                    lowerBounds[scenariosForBlueprint.Key] = max;
+            }
         }
-
-        return 0;
+        
+        return lowerBounds.Sum(b => b.Key.Id * b.Value);
     }
 
     public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
@@ -110,6 +174,6 @@ Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsid
     [Fact]
     public void SolvesPartOneExample() {
         var actual = new Day19(ExampleInput, Output).SolvePartOne();
-        Assert.Equal(0, actual);
+        Assert.Equal(33, actual);
     }
 }
