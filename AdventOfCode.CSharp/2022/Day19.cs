@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -72,7 +71,6 @@ public class Day19 : Solver {
             $"Each obsidian robot costs {ObsidianRobotOreCost} ore and {ObsidianRobotClayCost} clay. " +
             $"Each geode robot costs {GeodeRobotOreCost} ore and {GeodeRobotObsidianCost} obsidian.";
 
-
         public string ToPrettyString() =>
             $"Blueprint {Id}: " + Environment.NewLine +
             $"  Each ore robot costs {OreRobotOreCost} ore. " + Environment.NewLine +
@@ -90,130 +88,172 @@ public class Day19 : Solver {
 
         public readonly int Obsidians;
 
-        public readonly int Geodes;
-
         public readonly int OreRobots;
 
         public readonly int ClayRobots;
 
         public readonly int ObsidianRobots;
 
-        public readonly int GeodeRobots;
-
         public readonly int TimeLeft;
 
-        public Scenario(Blueprint blueprint, int ores, int clays, int obsidians, int geodes, int oreRobots, int clayRobots, int obsidianRobots, int geodeRobots, int timeLeft) {
+        public readonly int LifetimeGeodesCracked;
+
+        public Scenario(Blueprint blueprint, int ores, int clays, int obsidians, int oreRobots, int clayRobots, int obsidianRobots, int timeLeft, int lifetimeGeodesCracked) {
             Blueprint = blueprint;
             Ores = ores;
             Clays = clays;
             Obsidians = obsidians;
-            Geodes = geodes;
             OreRobots = oreRobots;
             ClayRobots = clayRobots;
             ObsidianRobots = obsidianRobots;
-            GeodeRobots = geodeRobots;
             TimeLeft = timeLeft;
+            LifetimeGeodesCracked = lifetimeGeodesCracked;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Scenario Tick() {
-            return new Scenario(Blueprint, Ores + OreRobots, Clays + ClayRobots, Obsidians + ObsidianRobots,
-                Geodes + GeodeRobots, OreRobots, ClayRobots, ObsidianRobots, GeodeRobots, TimeLeft - 1);
+        public Scenario BuildGeodeRobot(int timeTaken) {
+            return new Scenario(Blueprint, 
+                Ores + timeTaken * OreRobots - Blueprint.GeodeRobotOreCost, 
+                Clays + timeTaken * ClayRobots,
+                Obsidians + timeTaken * ObsidianRobots - Blueprint.GeodeRobotObsidianCost,
+                OreRobots, 
+                ClayRobots, 
+                ObsidianRobots,
+                TimeLeft - timeTaken, 
+                LifetimeGeodesCracked + (TimeLeft - timeTaken));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Scenario BuildGeodeRobot() {
-            return new Scenario(Blueprint, Ores + OreRobots - Blueprint.GeodeRobotOreCost, Clays + ClayRobots, Obsidians + ObsidianRobots - Blueprint.GeodeRobotObsidianCost,
-                Geodes + GeodeRobots, OreRobots, ClayRobots, ObsidianRobots, GeodeRobots + 1, TimeLeft - 1);
+        public Scenario BuildObsidianRobot(int timeTaken) {
+            return new Scenario(Blueprint,
+                Ores + timeTaken * OreRobots - Blueprint.ObsidianRobotOreCost,
+                Clays + timeTaken * ClayRobots - Blueprint.ObsidianRobotClayCost,
+                Obsidians + timeTaken * ObsidianRobots,
+                OreRobots,
+                ClayRobots,
+                ObsidianRobots + 1,
+                TimeLeft - timeTaken,
+                LifetimeGeodesCracked);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Scenario BuildObsidianRobot() {
-            return new Scenario(Blueprint, Ores + OreRobots - Blueprint.ObsidianRobotOreCost, Clays + ClayRobots - Blueprint.ObsidianRobotClayCost, Obsidians + ObsidianRobots,
-                Geodes + GeodeRobots, OreRobots, ClayRobots, ObsidianRobots + 1, GeodeRobots, TimeLeft - 1);
+        public Scenario BuildClayRobot(int timeTaken) {
+            return new Scenario(Blueprint,
+                Ores + timeTaken * OreRobots - Blueprint.ClayRobotOreCost,
+                Clays + timeTaken * ClayRobots,
+                Obsidians + timeTaken * ObsidianRobots,
+                OreRobots,
+                ClayRobots + 1,
+                ObsidianRobots,
+                TimeLeft - timeTaken,
+                LifetimeGeodesCracked);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Scenario BuildClayRobot() {
-            return new Scenario(Blueprint, Ores + OreRobots - Blueprint.ClayRobotOreCost, Clays + ClayRobots, Obsidians + ObsidianRobots,
-                Geodes + GeodeRobots, OreRobots, ClayRobots + 1, ObsidianRobots, GeodeRobots, TimeLeft - 1);
+        public Scenario BuildOreRobot(int timeTaken) {
+            return new Scenario(Blueprint,
+                Ores + timeTaken * OreRobots - Blueprint.OreRobotOreCost,
+                Clays + timeTaken * ClayRobots,
+                Obsidians + timeTaken * ObsidianRobots,
+                OreRobots + 1,
+                ClayRobots,
+                ObsidianRobots,
+                TimeLeft - timeTaken,
+                LifetimeGeodesCracked);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Scenario BuildOreRobot() {
-            return new Scenario(Blueprint, Ores + OreRobots - Blueprint.OreRobotOreCost, Clays + ClayRobots, Obsidians + ObsidianRobots,
-                Geodes + GeodeRobots, OreRobots + 1, ClayRobots, ObsidianRobots, GeodeRobots, TimeLeft - 1);
+        public override int GetHashCode() {
+            return HashCode.Combine(Ores, Clays, Obsidians, OreRobots, ClayRobots, ObsidianRobots, TimeLeft, LifetimeGeodesCracked);
         }
     }
 
     public override long SolvePartOne() {
         var blueprints = ParseBlueprints(Input);
-        var scenarios = blueprints.Select(b => new Scenario(b, 0, 0, 0, 0, 1, 0, 0, 0, 24)).ToArray();
+        var currentScenarios = blueprints.Select(b => new Scenario(b, 0, 0, 0, 1, 0, 0, 24, 0)).ToArray();
+        var seenScenarios = Enumerable.Range(0, blueprints.Max(bp => bp.Id) + 1).Select(_ => new HashSet<Scenario>()).ToArray();
         var i = 0;
+        var timer = new Stopwatch();
         var lowerBounds = blueprints.ToDictionary(b => b, _ => 0);
 
-        while (scenarios.Any()) {
-            Output.WriteLine($"Pass {++i} with {scenarios.Length} scenarios to evaluate");
+        while (currentScenarios.Any()) {
+            timer.Reset();
+            timer.Start();
+            var passOperations = currentScenarios.Length;
+            Output.WriteLine($"Pass {++i} with {passOperations:N0} scenarios to evaluate");
 
-            var newlySeenScenarios = new ConcurrentBag<Scenario>();
+            var nextScenarios = new ConcurrentBag<Scenario>();
 
-            scenarios.AsParallel().ForAll(scenario =>
+            currentScenarios.AsParallel().ForAll(scenario =>
             {
-                var blueprint = scenario.Blueprint;
-                if (scenario.TimeLeft <= 0) return;
-                var builtARobot = false;
-
-                // build geode robot
-                if (scenario.Ores >= blueprint.GeodeRobotOreCost &&
-                    scenario.Obsidians >= blueprint.GeodeRobotObsidianCost) {
-                    newlySeenScenarios.Add(scenario.BuildGeodeRobot());
-
-                    // assumption: this is always the best action (?)
-                    return;
-                }
-
-                // build obsidian robot
-                if (scenario.Ores >= blueprint.ObsidianRobotOreCost &&
-                    scenario.Clays >= blueprint.ObsidianRobotClayCost) {
-                    newlySeenScenarios.Add(scenario.BuildObsidianRobot());
-
-                    // assumption: this is always the best action if you don't already have production (?)
-                    if (scenario.Obsidians == 0)
-                        return;
-                }
+                if (seenScenarios[scenario.Blueprint.Id].Contains(scenario)) return;
                 
-                // build clay robot
-                if (scenario.Ores >= blueprint.ClayRobotOreCost && scenario.ClayRobots < 8) {
-                    newlySeenScenarios.Add(scenario.BuildClayRobot());
+                var blueprint = scenario.Blueprint;
 
-                    // assumption: this is always the best action if you don't already have production (?)
-                    if (scenario.Clays == 0)
-                        return;
+                // no time left to build and produce any more geodes
+                if (scenario.TimeLeft <= 1) return;
+
+                // if we have obsidian production, we could try to build another geode cracking robot
+                if (scenario.ObsidianRobots > 0) {
+                    var timeUntilGeodeRobotReady = 1 + Math.Max(
+                        Math.Max(0, (blueprint.GeodeRobotOreCost - scenario.Ores + scenario.OreRobots - 1) / scenario.OreRobots),
+                        Math.Max(0, (blueprint.GeodeRobotObsidianCost - scenario.Obsidians + scenario.ObsidianRobots - 1) / scenario.ObsidianRobots)
+                    );
+
+                    if (timeUntilGeodeRobotReady < scenario.TimeLeft) {
+                        nextScenarios.Add(scenario.BuildGeodeRobot(timeUntilGeodeRobotReady));
+                    }
                 }
 
-                // build ore robot
-                if (scenario.Ores >= blueprint.OreRobotOreCost && scenario.OreRobots < 5) {
-                    newlySeenScenarios.Add(scenario.BuildOreRobot());
+                // if we have clay production, we could try to build another obsidian robot
+                if (scenario.ClayRobots > 0) {
+                    var timeUntilObsidianRobotReady = 1 + Math.Max(
+                        Math.Max(0, (blueprint.ObsidianRobotOreCost - scenario.Ores + scenario.OreRobots - 1) / scenario.OreRobots),
+                        Math.Max(0, (blueprint.ObsidianRobotClayCost - scenario.Clays + scenario.ClayRobots - 1) / scenario.ClayRobots)
+                    );
+
+                    if (timeUntilObsidianRobotReady < scenario.TimeLeft) {
+                        nextScenarios.Add(scenario.BuildObsidianRobot(timeUntilObsidianRobotReady));
+                    }
                 }
 
-                newlySeenScenarios.Add(scenario.Tick());
+                // we can always try to build a clay robot
+                var timeUntilClayRobotReady = 1 + Math.Max(0, (blueprint.ClayRobotOreCost - scenario.Ores + scenario.OreRobots - 1) / scenario.OreRobots);
+                if (timeUntilClayRobotReady < scenario.TimeLeft) {
+                    nextScenarios.Add(scenario.BuildClayRobot(timeUntilClayRobotReady));
+                }
+
+                // we can always try to build an ore robot
+                var timeUntilOreRobotReady = 1 + Math.Max(0, (blueprint.OreRobotOreCost - scenario.Ores + scenario.OreRobots - 1) / scenario.OreRobots);
+                if (timeUntilOreRobotReady < scenario.TimeLeft) {
+                    nextScenarios.Add(scenario.BuildOreRobot(timeUntilOreRobotReady));
+                }
             });
             
-            Output.WriteLine($"... done exploring, with {newlySeenScenarios.Count} new scenarios seen");
+            Output.WriteLine($"... done exploring, building next pass");
 
-            scenarios = newlySeenScenarios.ToArray();
+            // add all to the hashset
+            foreach (var s in currentScenarios) 
+                seenScenarios[s.Blueprint.Id].Add(s);
+
+            // set up the next pass
+            currentScenarios = nextScenarios.Distinct().ToArray();
 
             // write out lower bounds
-            foreach (var scenariosForBlueprint in scenarios.GroupBy(b => b.Blueprint)) {
-                var max = scenariosForBlueprint.Max(s => s.Geodes);
+            foreach (var scenariosForBlueprint in currentScenarios.GroupBy(b => b.Blueprint)) {
+                var max = scenariosForBlueprint.Max(s => s.LifetimeGeodesCracked);
 
                 if (max > lowerBounds[scenariosForBlueprint.Key])
                     lowerBounds[scenariosForBlueprint.Key] = max;
             }
-        }
 
+            timer.Stop();
+            Output.WriteLine(timer.ElapsedMilliseconds < 1
+                ? $"... finished pass {i} after {timer.ElapsedTicks} ticks."
+                : $"... finished pass {i} after {1e-3 * timer.ElapsedMilliseconds:N1}s. {passOperations / (1.0 * timer.ElapsedMilliseconds):N1} kops/sec");
+        }
+        
         foreach (var blueprint in lowerBounds) {
-            Output.WriteLine($"Blueprnt {blueprint.Key.Id}, geodes {blueprint.Value}");
+            Output.WriteLine($"Blueprint {blueprint.Key.Id} produces at most {blueprint.Value} geodes");
         }
 
         return lowerBounds.Sum(b => b.Key.Id * b.Value);
