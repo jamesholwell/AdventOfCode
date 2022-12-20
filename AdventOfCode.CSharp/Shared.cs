@@ -7,5 +7,5 @@ public static class Shared {
     public static string[] Split(this string s) =>
         s.SplitBy("\n");
 
-    public static int[] SplitInt(this string s) => s.Split().Select(int.Parse).ToArray();
+    public static int[] SplitInt(this string s) => Shared.Split(s).Select(int.Parse).ToArray();
 }
