@@ -7,12 +7,15 @@ public abstract class Solver<T> : ISolver {
     protected Solver(string? input = null, ITestOutputHelper? outputHelper = null) {
         Input = input ?? string.Empty;
         Output = outputHelper ?? new ConsoleOutputHelper();
+        Trace = outputHelper ?? new NullOutputHelper();
     }
 
     protected string Input { get; }
 
     protected ITestOutputHelper Output { get; }
 
+    protected ITestOutputHelper Trace { get; }
+    
     string ISolver.SolvePartOne() => Convert.ToString(SolvePartOne()) ?? throw new NotImplementedException();
 
     string ISolver.SolvePartTwo() => Convert.ToString(SolvePartTwo()) ?? throw new NotImplementedException();
