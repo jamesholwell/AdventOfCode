@@ -1,5 +1,6 @@
 ﻿using Xunit;
 using Xunit.Abstractions;
+using InvalidOperationException = System.InvalidOperationException;
 
 namespace AdventOfCode.CSharp._2022;
 
@@ -66,7 +67,7 @@ public class Day21 : Solver {
 
         public override string ToString() => $"{Name}: {LeftMonkey} {OperatorSymbol} {RightMonkey}";
 
-        private string OperatorSymbol => Operator switch {
+        public string OperatorSymbol => Operator switch {
             Operators.Add => "+",
             Operators.Subtract => "-",
             Operators.Multiply => "*",
@@ -140,14 +141,118 @@ public class Day21 : Solver {
 
         var linkedMonkeys = ResolveLinks(inputMonkeys.Values);
         
-        Trace.WriteLine();
-        Trace.WriteLine("Left:");
-        Trace.WriteLine(root.Left!);
-        Trace.WriteLine();
-        Trace.WriteLine("Right:");
-        Trace.WriteLine(root.Right!);
+        Output.WriteLine();
+        Output.WriteLine("Left:");
+        var leftEvaluated = Evaluate(root.Left!);
+        Output.WriteLine(leftEvaluated);
+        
+        Output.WriteLine();
+        Output.WriteLine("Right:");
+        var rightEvaluated = Evaluate(root.Right!);
+        Output.WriteLine(rightEvaluated);
+
+        var isLeftResult = leftEvaluated is SpecificNumberYellingMonkey;
+        var result = isLeftResult ? leftEvaluated.Value : rightEvaluated.Value;
+        var operation = isLeftResult ? rightEvaluated : leftEvaluated;
+
+        while (true) {
+            if (operation is VariableYellingMonkey)
+                return result;
+
+            if (operation is MathOperationYellingMonkey mom) {
+                if (mom.Left is SpecificNumberYellingMonkey) {
+                    switch (mom.Operator) {
+                        // result = x + ?
+                        case MathOperationYellingMonkey.Operators.Add:
+                            result -= mom.Left.Value;
+                            break;
+
+                        // result = x - ?
+                        case MathOperationYellingMonkey.Operators.Subtract:
+                            result -= mom.Left.Value;
+                            result *= -1L;
+                            break;
+
+                        // result = x * ?
+                        case MathOperationYellingMonkey.Operators.Multiply:
+                            result /= mom.Left.Value;
+                            break;
+
+                        // result = x / ? -> result/x = 1/? -> ? = x/result
+                        case MathOperationYellingMonkey.Operators.Divide:
+                            result = mom.Left.Value / result;
+                            break;
+
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    operation = mom.Right;
+                    continue;
+                }
+
+                if (mom.Right is SpecificNumberYellingMonkey) {
+                    switch (mom.Operator) {
+                        // result = ? + x
+                        case MathOperationYellingMonkey.Operators.Add:
+                            result -= mom.Right.Value;
+                            break;
+
+                        // result = ? - x
+                        case MathOperationYellingMonkey.Operators.Subtract:
+                            result += mom.Right.Value;
+                            break;
+
+                        // result = ? * x
+                        case MathOperationYellingMonkey.Operators.Multiply:
+                            result /= mom.Right.Value;
+                            break;
+
+                        // result = ? / x -> result/x = 1/? -> ? = x/result
+                        case MathOperationYellingMonkey.Operators.Divide:
+                            result *= mom.Right.Value;
+                            break;
+
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    operation = mom.Left;
+                    continue;
+                }
+            }
+
+            throw new InvalidOperationException();
+        }
 
         return -1;
+    }
+
+    private IYellingMonkey Evaluate(IYellingMonkey monkey) {
+        switch (monkey) {
+            case SpecificNumberYellingMonkey svm:
+                return svm;
+
+            case VariableYellingMonkey vvm:
+                return vvm;
+
+            case MathOperationYellingMonkey mom:
+                var left = Evaluate(mom.Left!);
+                var right = Evaluate(mom.Right!);
+
+                if (left is SpecificNumberYellingMonkey lsvm && right is SpecificNumberYellingMonkey rsvm)
+                    return mom.Operator switch {
+                        MathOperationYellingMonkey.Operators.Add => new SpecificNumberYellingMonkey(string.Empty, left.Value + right.Value),
+                        MathOperationYellingMonkey.Operators.Subtract => new SpecificNumberYellingMonkey(string.Empty, left.Value - right.Value),
+                        MathOperationYellingMonkey.Operators.Multiply => new SpecificNumberYellingMonkey(string.Empty, left.Value * right.Value),
+                        MathOperationYellingMonkey.Operators.Divide => new SpecificNumberYellingMonkey(string.Empty, left.Value / right.Value),
+                        _ => throw new ArgumentOutOfRangeException()
+                    };
+
+                return new MathOperationYellingMonkey(string.Empty, left.ToString(), mom.Operator, right.ToString()) { Left = left, Right = right };
+            default:
+                throw new InvalidOperationException();
+        }
     }
 
     private const string? ExampleInput = @"
