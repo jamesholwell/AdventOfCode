@@ -9,8 +9,6 @@ public class Day21 : Solver {
     private interface IYellingMonkey {
         string Name { get; }
 
-        bool IsReady { get; }
-
         long Value { get; }
     }
 
@@ -21,8 +19,6 @@ public class Day21 : Solver {
         }
 
         public string Name { get; }
-
-        public bool IsReady => true;
 
         public long Value { get; }
 
@@ -38,26 +34,25 @@ public class Day21 : Solver {
         }
 
         public string Name { get; }
-
-        public bool IsReady => LeftValue.HasValue && RightValue.HasValue;
-
-        public Operators Operator { get; init; }
+        
+        public Operators Operator { get; set; }
 
         public string LeftMonkey { get; init; }
         
-        public long? LeftValue { get; set; }
+        public IYellingMonkey? Left { get; set; }
 
         public string RightMonkey { get; init; }
 
-        public long? RightValue { get; set; }
+        public IYellingMonkey? Right { get; set; }
 
-        public long Value => !LeftValue.HasValue || !RightValue.HasValue
+        public long Value => Left == null || Right == null
             ? throw new InvalidOperationException()
             : Operator switch {
-                Operators.Add => LeftValue.Value + RightValue.Value,
-                Operators.Subtract => LeftValue.Value - RightValue.Value,
-                Operators.Multiply => LeftValue.Value * RightValue.Value,
-                Operators.Divide => LeftValue.Value / RightValue.Value,
+                Operators.Add => Left.Value + Right.Value,
+                Operators.Subtract => Left.Value - Right.Value,
+                Operators.Multiply => Left.Value * Right.Value,
+                Operators.Divide => Left.Value / Right.Value,
+                Operators.IsEqual => Left.Value == Right.Value ? 1 : 0,
                 _ => throw new ArgumentOutOfRangeException()
             };
 
@@ -65,20 +60,32 @@ public class Day21 : Solver {
             Add,
             Subtract,
             Multiply,
-            Divide
+            Divide,
+            IsEqual
         }
 
-        public override string ToString() => IsReady 
-            ? $"{Name}: {Value} ({LeftMonkey} {OperatorSymbol} {RightMonkey})" 
-            : $"{Name}: {LeftMonkey} {OperatorSymbol} {RightMonkey}";
+        public override string ToString() => $"{Name}: {LeftMonkey} {OperatorSymbol} {RightMonkey}";
 
         private string OperatorSymbol => Operator switch {
             Operators.Add => "+",
             Operators.Subtract => "-",
             Operators.Multiply => "*",
             Operators.Divide => "/",
+            Operators.IsEqual => "==",
             _ => throw new ArgumentOutOfRangeException()
         };
+    }
+
+    private class VariableYellingMonkey : IYellingMonkey {
+        public VariableYellingMonkey(string name) {
+            Name = name;
+        }
+
+        public string Name { get; }
+
+        public long Value => throw new InvalidOperationException();
+
+        public override string ToString() => $"{Name}: ???";
     }
 
     private static IEnumerable<IYellingMonkey> Parse(string input) {
@@ -104,41 +111,44 @@ public class Day21 : Solver {
         }
     }
 
-    public override long SolvePartOne() {
-        var monkeys = Parse(Input).ToArray();
+    public override long SolvePartOne() => ResolveLinks(Parse(Input))["root"].Value;
+
+    private IDictionary<string, IYellingMonkey> ResolveLinks(IEnumerable<IYellingMonkey> inputMonkeys) {
+        var monkeys = inputMonkeys.ToDictionary(m => m.Name, m => m);
 
         foreach (var monkey in monkeys) 
-            Trace.WriteLine(monkey);
+            Trace.WriteLine(monkey.Value);
 
-        var ready = monkeys.Where(m => m.IsReady).ToDictionary(m => m.Name, m => m);
-        var unready = monkeys.Except(ready.Values).Cast<MathOperationYellingMonkey>().ToList();
-
-        while (unready.Any()) {
-            var stillUnready = new List<MathOperationYellingMonkey>(unready.Count);
-            
-            foreach (var monkey in unready) {
-                if (ready.TryGetValue(monkey.LeftMonkey, out var left) &&
-                    ready.TryGetValue(monkey.RightMonkey, out var right)) {
-                    monkey.LeftValue = left.Value;
-                    monkey.RightValue = right.Value;
-                    ready.Add(monkey.Name, monkey);
-                }
-                else {
-                    stillUnready.Add(monkey);
-                }
+        foreach (var monkey in monkeys.Values.Where(m => m is MathOperationYellingMonkey).Cast<MathOperationYellingMonkey>()) {
+            if (!monkeys.TryGetValue(monkey.LeftMonkey, out var left) ||
+                !monkeys.TryGetValue(monkey.RightMonkey, out var right)) {
+                throw new InvalidOperationException();
             }
 
-            unready = stillUnready;
+            monkey.Left = left;
+            monkey.Right = right;
         }
 
-        Trace.WriteLine();
-        foreach (var monkey in monkeys)
-            Trace.WriteLine(monkey);
-
-        return ready["root"].Value;
+        return monkeys;
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        var inputMonkeys = Parse(Input).ToDictionary(m => m.Name, m => m);
+        var root = (MathOperationYellingMonkey) inputMonkeys["root"];
+        root.Operator = MathOperationYellingMonkey.Operators.IsEqual;
+        inputMonkeys["humn"] = new VariableYellingMonkey("humn");
+
+        var linkedMonkeys = ResolveLinks(inputMonkeys.Values);
+        
+        Trace.WriteLine();
+        Trace.WriteLine("Left:");
+        Trace.WriteLine(root.Left!);
+        Trace.WriteLine();
+        Trace.WriteLine("Right:");
+        Trace.WriteLine(root.Right!);
+
+        return -1;
+    }
 
     private const string? ExampleInput = @"
 root: pppw + sjmn
@@ -167,5 +177,11 @@ hmdt: 32
     public void SolvesPartOneExample() {
         var actual = new Day21(ExampleInput, Output).SolvePartOne();
         Assert.Equal(152, actual);
+    }
+
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day21(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(301, actual);
     }
 }
