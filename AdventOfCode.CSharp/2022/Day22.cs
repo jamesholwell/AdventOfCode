@@ -54,6 +54,13 @@ public class Day22 : Solver {
         }
     }
 
+    public enum Facing {
+        Up = 3,
+        Right = 0,
+        Down = 1,
+        Left = 2
+    }
+
     private abstract class Face {
         protected Face(string[] map) {
             Map = map;
@@ -78,6 +85,66 @@ public class Day22 : Solver {
         public int LeftRotation { get; set; }
 
         public string this[int newY] => Map[newY];
+
+        public Face? GetDiagonal(Facing neighbor, Facing neighborOfNeighbor) {
+            var neigboringFace = neighbor switch
+            {
+                Facing.Up => Up,
+                Facing.Right => Right,
+                Facing.Down => Down,
+                Facing.Left => Left,
+                _ => throw new ArgumentOutOfRangeException(nameof(neighbor), neighbor, null)
+            };
+
+            if (neigboringFace == null) return null;
+
+            var neighborsRotation = neighbor switch {
+                Facing.Up => UpRotation,
+                Facing.Right => RightRotation,
+                Facing.Down => DownRotation,
+                Facing.Left => LeftRotation,
+                _ => throw new ArgumentOutOfRangeException(nameof(neighbor), neighbor, null)
+            };
+
+            var orientedNeighborOfNeighbor = (Facing) ((((int)neighborOfNeighbor - neighborsRotation) % 4 + 4) % 4);
+            return orientedNeighborOfNeighbor switch
+            {
+                Facing.Up => neigboringFace.Up,
+                Facing.Right => neigboringFace.Right,
+                Facing.Down => neigboringFace.Down,
+                Facing.Left => neigboringFace.Left,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
+
+        public int GetDiagonalRotation(Facing neighbor, Facing neighborOfNeighbor) {
+            var neigboringFace = neighbor switch {
+                Facing.Up => Up,
+                Facing.Right => Right,
+                Facing.Down => Down,
+                Facing.Left => Left,
+                _ => throw new ArgumentOutOfRangeException(nameof(neighbor), neighbor, null)
+            };
+
+            if (neigboringFace == null) throw new InvalidOperationException();
+
+            var neighborsRotation = neighbor switch {
+                Facing.Up => UpRotation,
+                Facing.Right => RightRotation,
+                Facing.Down => DownRotation,
+                Facing.Left => LeftRotation,
+                _ => throw new ArgumentOutOfRangeException(nameof(neighbor), neighbor, null)
+            };
+
+            var orientedNeighborOfNeighbor = (Facing)((((int)neighborOfNeighbor - neighborsRotation) % 4 + 4) % 4);
+            return neighborsRotation + orientedNeighborOfNeighbor switch {
+                Facing.Up => neigboringFace.UpRotation,
+                Facing.Right => neigboringFace.RightRotation,
+                Facing.Down => neigboringFace.DownRotation,
+                Facing.Left => neigboringFace.LeftRotation,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
     }
 
     private sealed class MapFace : Face {
@@ -212,20 +279,6 @@ public class Day22 : Solver {
         return buffer.ToString();
     }
 
-    public override long SolvePartOne() {
-        var (cube, instructions) = Parse(Input);
-        Link(cube);
-        
-        var position = (cube.CurrentFace, 0, 0, 0);
-        Trace.WriteLine(Render(cube));
-
-        var (finalPosition, positionHistory) = Walk(cube, position, instructions);
-
-        Output.WriteLine(Render(cube, positionHistory));
-
-        return ((MapFace) finalPosition.face).Password(finalPosition);
-    }
-
     private static void Link(Cube cube) {
         for (var row = 0; row < cube.NumberOfRows; ++row) {
             for (var column = 0; column < cube.NumberOfColumns; ++column) {
@@ -262,6 +315,73 @@ public class Day22 : Solver {
             }
         }
     }
+    
+    private static void Fold(Cube cube) {
+        // make the inferred connections
+        var notBored = true;
+
+        while (notBored) {
+            notBored = false;
+            for (var row = 0; row < cube.NumberOfRows; ++row) {
+                for (var column = 0; column < cube.NumberOfColumns; ++column) {
+                    var face = cube[row, column];
+                    if (face is EmptyFace) continue;
+
+                    if (face.Up == null) {
+                        if (face.GetDiagonal(Facing.Right, Facing.Up) != null) {
+                            face.Up = face.GetDiagonal(Facing.Right, Facing.Up);
+                            face.UpRotation = face.GetDiagonalRotation(Facing.Right, Facing.Up) - 1;
+                            notBored = true;
+                        }
+                        else if (face.GetDiagonal(Facing.Left, Facing.Up) != null) {
+                            face.Up = face.GetDiagonal(Facing.Left, Facing.Up);
+                            face.UpRotation = face.GetDiagonalRotation(Facing.Left, Facing.Up) + 1;
+                            notBored = true;
+                        }
+                    }
+
+                    if (face.Right == null) {
+                        if (face.GetDiagonal(Facing.Down, Facing.Right) != null) {
+                            face.Right = face.GetDiagonal(Facing.Down, Facing.Right);
+                            face.RightRotation = face.GetDiagonalRotation(Facing.Down, Facing.Right) - 1;
+                            notBored = true;
+                        }
+                        else if (face.GetDiagonal(Facing.Up, Facing.Right) != null) {
+                            face.Right = face.GetDiagonal(Facing.Up, Facing.Right);
+                            face.RightRotation = face.GetDiagonalRotation(Facing.Up, Facing.Right) + 1;
+                            notBored = true;
+                        }
+                    }
+
+                    if (face.Down == null) {
+                        if (face.GetDiagonal(Facing.Left, Facing.Down) != null) {
+                            face.Down = face.GetDiagonal(Facing.Left, Facing.Down);
+                            face.DownRotation = face.GetDiagonalRotation(Facing.Left, Facing.Down) - 1;
+                            notBored = true;
+                        }
+                        else if (face.GetDiagonal(Facing.Right, Facing.Down) != null) {
+                            face.Down = face.GetDiagonal(Facing.Right, Facing.Down);
+                            face.DownRotation = face.GetDiagonalRotation(Facing.Right, Facing.Down) + 1;
+                            notBored = true;
+                        }
+                    }
+
+                    if (face.Left == null) {
+                        if (face.GetDiagonal(Facing.Up, Facing.Left) != null) {
+                            face.Left = face.GetDiagonal(Facing.Up, Facing.Left);
+                            face.LeftRotation = face.GetDiagonalRotation(Facing.Up, Facing.Left) - 1;
+                            notBored = true;
+                        }
+                        else if (face.GetDiagonal(Facing.Down, Facing.Left) != null) {
+                            face.Left = face.GetDiagonal(Facing.Down, Facing.Left);
+                            face.LeftRotation = face.GetDiagonalRotation(Facing.Down, Facing.Left) + 1;
+                            notBored = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     private ((Face face, int x, int y, int f), IDictionary<Face, int?[,]>) Walk(Cube cube, (Face face, int x, int y, int f) initialPosition, (int forward, int turn)[] instructions) {
         var positionHistory = cube.Faces.ToDictionary(f => f, _ => new int?[cube.FaceSize, cube.FaceSize]);
@@ -273,32 +393,53 @@ public class Day22 : Solver {
                 var newFace = position.face;
                 var newX = position.x + (position.f == 0 ? 1 : position.f == 2 ? -1 : 0);
                 var newY = position.y + (position.f == 1 ? 1 : position.f == 3 ? -1 : 0);
+                var newFacing = position.f;
+
+                (int, int, int) Rotate(int x, int y, int f, int rotation) {
+                    if (rotation == 0) return (x, y, f);
+
+                    var requiredRightTurns = (rotation % 4 + 4) % 4;
+
+                    while (requiredRightTurns-- > 0) {
+                        var tempX = x;
+                        x = y;
+                        y = cube.FaceSize - 1 - tempX;
+                        f -= 1;
+                    }
+
+                    f = (f % 4 + 4) % 4;
+                    return (x, y, f);
+                }
 
                 if (newX < 0) {
+                    var rotation = newFace.LeftRotation;
                     newFace = newFace.Left!;
-                    newX = cube.FaceSize - 1;
+                    (newX, newY, newFacing) = Rotate(cube.FaceSize - 1, newY, newFacing, rotation);
                 }
 
                 if (newY < 0) {
+                    var rotation = newFace.UpRotation;
                     newFace = newFace.Up!;
-                    newY = cube.FaceSize - 1;
+                    (newX, newY, newFacing) = Rotate(newX, cube.FaceSize - 1, newFacing, rotation);
                 }
 
                 if (newX >= cube.FaceSize) {
+                    var rotation = newFace.RightRotation;
                     newFace = newFace.Right!;
-                    newX = 0;
+                    (newX, newY, newFacing) = Rotate(0, newY, newFacing, rotation);
                 }
 
                 if (newY >= cube.FaceSize) {
+                    var rotation = newFace.DownRotation;
                     newFace = newFace.Down!;
-                    newY = 0;
+                    (newX, newY, newFacing) = Rotate(newX, 0, newFacing, rotation);
                 }
 
                 if (newFace[newY][newX] == '#') {
                     break;
                 }
 
-                position = (newFace, newX, newY, position.f);
+                position = (newFace, newX, newY, newFacing);
                 positionHistory[newFace][position.x, position.y] = position.f;
             }
 
@@ -309,7 +450,33 @@ public class Day22 : Solver {
         return (position, positionHistory);
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartOne() {
+        var (cube, instructions) = Parse(Input);
+        Link(cube);
+        
+        var position = (cube.CurrentFace, 0, 0, 0);
+        Trace.WriteLine(Render(cube));
+
+        var (finalPosition, positionHistory) = Walk(cube, position, instructions);
+
+        Output.WriteLine(Render(cube, positionHistory));
+
+        return ((MapFace) finalPosition.face).Password(finalPosition);
+    }
+
+    public override long SolvePartTwo() {
+        var (cube, instructions) = Parse(Input);
+        Fold(cube);
+
+        var position = (cube.CurrentFace, 0, 0, 0);
+        Trace.WriteLine(Render(cube));
+
+        var (finalPosition, positionHistory) = Walk(cube, position, instructions);
+
+        Output.WriteLine(Render(cube, positionHistory));
+
+        return ((MapFace)finalPosition.face).Password(finalPosition);
+    }
 
     private const string ExampleInput = @"
         ...#
@@ -368,12 +535,6 @@ public class Day22 : Solver {
 
     [Fact]
     public void WalksLinkedMapCorrectly() {
-        var (cube, instructions) = Parse(ExampleInput);
-        Link(cube);
-
-        var position = (cube.CurrentFace, 0, 0, 0);
-        var (finalPosition, positionHistory) = Walk(cube, position, instructions);
-
         const string expected = @"        >>v#    
         .#v.    
         #.v.    
@@ -387,12 +548,41 @@ public class Day22 : Solver {
         .#......
         ......#.
 ";
+
+        var (cube, instructions) = Parse(ExampleInput);
+        Link(cube);
+        var (_, positionHistory) = Walk(cube, (cube.CurrentFace, 0, 0, 0), instructions);
+
+        var actual = Render(cube, positionHistory);
+        Output.WriteLine(actual);
+        
+        Assert.Equal(expected.ReplaceLineEndings(), actual);
+    }
+
+    [Fact]
+    public void WalksFoldedMapCorrectly() {
+        const string expected = @"        >>v#    
+        .#v.    
+        #.v.    
+        ..v.    
+...#..^...v#    
+.>>>>>^.#.>>    
+.^#....#....    
+.^........#.    
+        ...#..v.
+        .....#v.
+        .#v<<<<.
+        ..v...#.
+";
+
+        var (cube, instructions) = Parse(ExampleInput);
+        Fold(cube);
+
+        var (_, positionHistory) = Walk(cube, (cube.CurrentFace, 0, 0, 0), instructions);
+
         var actual = Render(cube, positionHistory);
         Output.WriteLine(actual);
 
-        Assert.Equal(6, ((MapFace)finalPosition.face).OffsetY + finalPosition.y + 1);
-        Assert.Equal(8, ((MapFace)finalPosition.face).OffsetX + finalPosition.x + 1);
-        Assert.Equal(0, finalPosition.f);
         Assert.Equal(expected.ReplaceLineEndings(), actual);
     }
 
