@@ -108,7 +108,7 @@ public class Day23 : Solver {
         return buffer.ToString();
     }
 
-    private static void ExecuteRound(Elf[] elves, int round) {
+    private static bool ExecuteRound(Elf[] elves, int round) {
         var currentPositions = new HashSet<(int x, int y)>(elves.Select(e => e.Position));
 
         var movements = 
@@ -118,11 +118,14 @@ public class Day23 : Solver {
             .Where(p => p != null)
             .GroupBy(p => p!.Value.Item2)
             .Where(g => g.Count() == 1)
-            .Select(g => g.Single()!.Value);
+            .Select(g => g.Single()!.Value)
+            .ToArray();
 
         foreach (var movement in movements) {
             movement.Item1.Position = movement.Item2;
         }
+
+        return movements.Any();
     }
 
     public override long SolvePartOne() {
@@ -141,6 +144,25 @@ public class Day23 : Solver {
         }
 
         return emptySpaces;
+    }
+
+    public override long SolvePartTwo() {
+        var elves = Parse(Input);
+        var moving = true;
+        var round = 0;
+
+        Trace.WriteLine(Render(elves, out _));
+
+        // tick!
+        while(moving) {
+            moving = ExecuteRound(elves, round++);
+
+            Trace.WriteLine();
+            Trace.WriteLine(Render(elves, out _));
+            Trace.WriteLine();
+        }
+
+        return round;
     }
     
     private const string SmallExampleInput = @"
@@ -249,5 +271,11 @@ public class Day23 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day23(ExampleInput, Output).SolvePartOne();
         Assert.Equal(110, actual);
+    }
+
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day23(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(20, actual);
     }
 }
