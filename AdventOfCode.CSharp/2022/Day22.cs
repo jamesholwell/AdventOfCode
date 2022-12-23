@@ -17,8 +17,14 @@ public class Day22 : Solver {
     private class Cube {
         public Cube(int numberOfRows, int numberOfColumns, int faceSize) {
             _faces = new Face[4, 4];
+            for (var row = 0; row < 4; ++row) {
+                for (var column = 0; column < 4; ++column) {
+                    _faces[row, column] = new EmptyFace(faceSize);
+                }
+            }
+
             Faces = new List<Face>();
-            CurrentFace = new EmptyFace(0);
+            CurrentFace = _faces[0, 0];
             NumberOfRows = numberOfRows;
             NumberOfColumns = numberOfColumns;
             FaceSize = faceSize;
@@ -57,15 +63,41 @@ public class Day22 : Solver {
 
         public Face? Up { get; set; }
 
+        public int UpRotation { get; set; }
+
         public Face? Right { get; set; }
 
+        public int RightRotation { get; set; }
+        
         public Face? Down { get; set; }
 
+        public int DownRotation { get; set; }
+        
         public Face? Left { get; set; }
+
+        public int LeftRotation { get; set; }
+
+        public string this[int newY] => Map[newY];
     }
 
     private sealed class MapFace : Face {
-        public MapFace(string[] map) : base(map) { }
+        private readonly string identity;
+
+        public MapFace(int row, int column, string[] map) : base(map) {
+            identity = "ABCDEFGHIJKLMNOP".Substring(4 * row + column, 1);
+            OffsetY = map[0].Length * row;
+            OffsetX = map[0].Length * column;
+        }
+
+        public int OffsetY { get; }
+
+        public int OffsetX { get; }
+
+        public override string ToString() => identity + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, Map);
+
+        public long Password((Face face, int x, int y, int f) finalPosition) {
+            return 1000 * (OffsetY + finalPosition.y + 1) + 4 * (OffsetX + finalPosition.x + 1) + finalPosition.f;
+        }
     }
 
     private sealed class EmptyFace : Face {
@@ -97,16 +129,17 @@ public class Day22 : Solver {
                 if (string.IsNullOrWhiteSpace(slice[0]))
                     cube[row, column] = new EmptyFace(size);
                 else {
-                    cube[row, column] = new MapFace(slice);
+                    cube[row, column] = new MapFace(row, column, slice);
                 }
             }
         }
-        
+
+        // make the direct connections
         for (var row = 0; row < rows; ++row) {
             for (var column = 0; column < columns; ++column) {
                 var face = cube[row, column];
                 if (face is EmptyFace) continue;
-                
+
                 var upFace = cube[row - 1, column];
                 if (upFace is MapFace) {
                     face.Up = upFace;
@@ -132,7 +165,7 @@ public class Day22 : Solver {
                 }
             }
         }
-        
+
         return cube;
     }
 
@@ -163,8 +196,8 @@ public class Day22 : Solver {
                     var face = cube[row, column];
 
                     for (var x = 0; x < cube.FaceSize; ++x) {
-                        if (positionHistory?[face][column, row] != null) {
-                            buffer.Append(Facings[positionHistory[face][column, row]!.Value]);
+                        if (positionHistory?[face][x, y] != null) {
+                            buffer.Append(Facings[positionHistory[face][x, y]!.Value]);
                             continue;
                         }
 
@@ -180,62 +213,98 @@ public class Day22 : Solver {
     }
 
     public override long SolvePartOne() {
-        var (map, instructions) = Parse(Input);
-        var position = (0, 0, 0);
-        Trace.WriteLine(Render(map));
-
-        var (finalPosition, positionHistory) = Walk(map, position, instructions);
-
-        Output.WriteLine(Render(map, positionHistory));
+        var (cube, instructions) = Parse(Input);
+        Link(cube);
         
-        return 1000 * finalPosition.y + 4 * finalPosition.x + finalPosition.f;
+        var position = (cube.CurrentFace, 0, 0, 0);
+        Trace.WriteLine(Render(cube));
+
+        var (finalPosition, positionHistory) = Walk(cube, position, instructions);
+
+        Output.WriteLine(Render(cube, positionHistory));
+
+        return ((MapFace) finalPosition.face).Password(finalPosition);
     }
 
-    private ((int x, int y, int f), IDictionary<Face, int?[,]>) Walk(Cube map, (int x, int y, int f) initialPosition, (int forward, int turn)[] instructions) {
-        var positionHistory = map.Faces.ToDictionary(f => f, _ => new int?[map.NumberOfColumns, map.NumberOfRows]);
+    private static void Link(Cube cube) {
+        for (var row = 0; row < cube.NumberOfRows; ++row) {
+            for (var column = 0; column < cube.NumberOfColumns; ++column) {
+                var face = cube[row, column];
+                if (face is EmptyFace) continue;
+
+                if (face.Up == null) {
+                    var newRow = row;
+                    while (cube[--newRow, column] is EmptyFace) { }
+
+                    face.Up = cube[newRow, column];
+                }
+
+                if (face.Right == null) {
+                    var newColumn = column;
+                    while (cube[row, ++newColumn] is EmptyFace) { }
+
+                    face.Right = cube[row, newColumn];
+                }
+
+                if (face.Down == null) {
+                    var newRow = row;
+                    while (cube[++newRow, column] is EmptyFace) { }
+
+                    face.Down = cube[newRow, column];
+                }
+
+                if (face.Left == null) {
+                    var newColumn = column;
+                    while (cube[row, --newColumn] is EmptyFace) { }
+
+                    face.Left = cube[row, newColumn];
+                }
+            }
+        }
+    }
+
+    private ((Face face, int x, int y, int f), IDictionary<Face, int?[,]>) Walk(Cube cube, (Face face, int x, int y, int f) initialPosition, (int forward, int turn)[] instructions) {
+        var positionHistory = cube.Faces.ToDictionary(f => f, _ => new int?[cube.FaceSize, cube.FaceSize]);
         var position = initialPosition;
-        positionHistory[map.CurrentFace][position.x, position.y] = position.f;
+        positionHistory[cube.CurrentFace][position.x, position.y] = position.f;
 
-        //foreach (var instruction in instructions) {
-        //    for (var i = 0; i < instruction.forward; ++i) {
-        //        var newX = position.x + (position.f == 0 ? 1 : position.f == 2 ? -1 : 0);
-        //        var newY = position.y + (position.f == 1 ? 1 : position.f == 3 ? -1 : 0);
-                
-        //        if (map[newY][newX] == ' ') {
-        //            switch (position.f) {
-        //                case 0:
-        //                    newX = 1;
-        //                    while (map[newY][newX] == ' ') newX++;
-        //                    break;
+        foreach (var instruction in instructions) {
+            for (var i = 0; i < instruction.forward; ++i) {
+                var newFace = position.face;
+                var newX = position.x + (position.f == 0 ? 1 : position.f == 2 ? -1 : 0);
+                var newY = position.y + (position.f == 1 ? 1 : position.f == 3 ? -1 : 0);
 
-        //                case 1:
-        //                    newY = 1;
-        //                    while (map[newY][newX] == ' ') newY++;
-        //                    break;
+                if (newX < 0) {
+                    newFace = newFace.Left!;
+                    newX = cube.FaceSize - 1;
+                }
 
-        //                case 2:
-        //                    newX = width - 1;
-        //                    while (map[newY][newX] == ' ') newX--;
-        //                    break;
+                if (newY < 0) {
+                    newFace = newFace.Up!;
+                    newY = cube.FaceSize - 1;
+                }
 
-        //                case 3:
-        //                    newY = height - 1;
-        //                    while (map[newY][newX] == ' ') newY--;
-        //                    break;
-        //            }
-        //        }
+                if (newX >= cube.FaceSize) {
+                    newFace = newFace.Right!;
+                    newX = 0;
+                }
 
-        //        if (map[newY][newX] == '#') {
-        //            continue;
-        //        }
+                if (newY >= cube.FaceSize) {
+                    newFace = newFace.Down!;
+                    newY = 0;
+                }
 
-        //        position = (newX, newY, position.f);
-        //        positionHistory[position.x, position.y] = position.f;
-        //    }
+                if (newFace[newY][newX] == '#') {
+                    break;
+                }
 
-        //    position.f = ((position.f + instruction.turn) % 4 + 4) % 4;
-        //    positionHistory[position.x, position.y] = position.f;
-        //}
+                position = (newFace, newX, newY, position.f);
+                positionHistory[newFace][position.x, position.y] = position.f;
+            }
+
+            position.f = ((position.f + instruction.turn) % 4 + 4) % 4;
+            positionHistory[position.face][position.x, position.y] = position.f;
+        }
 
         return (position, positionHistory);
     }
@@ -298,11 +367,12 @@ public class Day22 : Solver {
     }
 
     [Fact]
-    public void WalksMapCorrectly() {
-        var (map, instructions) = Parse(ExampleInput);
-        var position = (0, 0, 0);
+    public void WalksLinkedMapCorrectly() {
+        var (cube, instructions) = Parse(ExampleInput);
+        Link(cube);
 
-        var (finalPosition, positionHistory) = Walk(map, position, instructions);
+        var position = (cube.CurrentFace, 0, 0, 0);
+        var (finalPosition, positionHistory) = Walk(cube, position, instructions);
 
         const string expected = @"        >>v#    
         .#v.    
@@ -317,13 +387,26 @@ public class Day22 : Solver {
         .#......
         ......#.
 ";
-        var actual = Render(map, positionHistory);
+        var actual = Render(cube, positionHistory);
         Output.WriteLine(actual);
 
-        Assert.Equal(6, finalPosition.y);
-        Assert.Equal(8, finalPosition.x);
+        Assert.Equal(6, ((MapFace)finalPosition.face).OffsetY + finalPosition.y + 1);
+        Assert.Equal(8, ((MapFace)finalPosition.face).OffsetX + finalPosition.x + 1);
         Assert.Equal(0, finalPosition.f);
         Assert.Equal(expected.ReplaceLineEndings(), actual);
+    }
+
+    [Fact]
+    public void WalksLinkedMapAndFinishesInCorrectPlace() {
+        var (cube, instructions) = Parse(ExampleInput);
+        Link(cube);
+
+        var position = (cube.CurrentFace, 0, 0, 0);
+        var (finalPosition, _) = Walk(cube, position, instructions);
+
+        Assert.Equal(6, ((MapFace)finalPosition.face).OffsetY + finalPosition.y + 1);
+        Assert.Equal(8, ((MapFace)finalPosition.face).OffsetX + finalPosition.x + 1);
+        Assert.Equal(0, finalPosition.f);
     }
 
     [Fact]
