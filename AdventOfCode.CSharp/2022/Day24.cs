@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Data.Common;
+using System.Text;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,21 +27,22 @@ public class Day24 : Solver {
 
         private readonly (int x, int y)[,,][] blizzardCache;
 
-        public Map(string input) {
+        private readonly bool[][,] frames;
+
+        public Map(string input, int numberOfFrames = 500) {
             var lines = Shared.Split(input);
 
-            Height = lines.Length - 2;
-            Width = lines[0].Trim().Length - 2;
-            blizzardCache = new (int x, int y)[Width, Height + 1, Width * Height][];
+            Height = lines.Length;
+            Width = lines[0].Trim().Length;
 
-            StartPosition = (lines[0].IndexOf('.') - 1, -1);
-            ExitPosition = (lines[^1].IndexOf('.') - 1, Height);
+            StartPosition = (lines[0].IndexOf('.'), 0);
+            ExitPosition = (lines[^1].IndexOf('.'), Height - 1);
 
-            for (var row = 0; row < Height; row++) {
-                for (var column = 0; column < Width; column++) {
-                    var cellPosition = (column, row);
+            for (var row = 1; row < Height - 1; row++) {
+                for (var column = 1; column < Width - 1; column++) {
+                    var cellPosition = (column - 1, row - 1);
 
-                    switch (lines[row + 1][column + 1]) {
+                    switch (lines[row][column]) {
                         case '^':
                             upBlizzards.Add(cellPosition);
                             break;
@@ -59,57 +61,94 @@ public class Day24 : Solver {
                     }
                 }
             }
-        }
 
-        public string Render(int t, (int x, int y)? position = null) {
-            var buffer = new StringBuilder((Height + 4) * (Width + 4));
-            
-            buffer.Append(Environment.NewLine);
-            buffer.Append(new string('#', 1 + StartPosition.x));
-            buffer.Append(position?.y == -1 ? 'E' : '.');
-            buffer.Append(new string('#', Width - StartPosition.x));
-            buffer.Append(Environment.NewLine);
+            frames = Enumerable.Range(0, numberOfFrames).Select(_ => new bool[Height, Width]).ToArray();
 
-            var blizzards =
-                upBlizzards.Select(b => (b.x, y: ((b.y - t) % Height + Height) % Height, d: '^')).Union(
-                        rightBlizzards.Select(b => (x: (b.x + t) % Width, b.y, d: '>')).Union(
-                            downBlizzards.Select(b => (b.x, y: (b.y + t) % Height, d: 'v')).Union(
-                                leftBlizzards.Select(b => (x: ((b.x - t) % Width + Width) % Width, b.y, d: '<')))))
-                    .GroupBy(b => (b.x, b.y))
-                    .ToDictionary(g => g.Key, g => g.Count() == 1 ? g.Single().d : g.Count().ToString()[0]);
-
-            for (var row = 0; row < Height; row++) {
-                buffer.Append('#');
-
-                for (var column = 0; column < Width; column++) {
-                    buffer.Append((position.HasValue && position.Value.x == column && position.Value.y == row) ? 'E' : 
-                    blizzards.TryGetValue((column, row), out var blizzard) ? blizzard : '.');
+            for (var t = 0; t < numberOfFrames; ++t) {
+                for (var x = 0; x < Width; ++x) {
+                    frames[t][x, 0] = x != StartPosition.x;
+                    frames[t][x, Height - 1] = x != ExitPosition.x;
                 }
-                
-                buffer.Append('#');
-                buffer.Append(Environment.NewLine);
+
+                for (var y = 1; y < Height - 1; ++y) {
+                    frames[t][0, y] = true;
+                    frames[t][Width - 1, y] = true;
+                }
             }
 
-            buffer.Append(new string('#', 1 + ExitPosition.x));
-            buffer.Append('.');
-            buffer.Append(new string('#', Width - ExitPosition.x));
+            var xMod = Width - 2;
+            var yMod = Height - 2;
+
+            foreach (var b in upBlizzards) {
+                for (var t = 0; t < numberOfFrames; ++t) {
+                    frames[t][1 + b.x, 1 + ((b.y - t) % yMod + yMod) % yMod] = true;
+                }
+            }
+
+            foreach (var b in rightBlizzards) {
+                for (var t = 0; t < numberOfFrames; ++t) {
+                    frames[t][1 + (b.x + t) % xMod, 1 + b.y] = true;
+                }
+            }
+
+            foreach (var b in downBlizzards) {
+                for (var t = 0; t < numberOfFrames; ++t) {
+                    frames[t][1 + b.x, 1 + (b.y + t) % yMod] = true;
+                }
+            }
+
+            foreach (var b in leftBlizzards) {
+                for (var t = 0; t < numberOfFrames; ++t) {
+                    frames[t][1 + ((b.x - t) % xMod + xMod) % xMod, 1 + b.y] = true;
+                }
+            }
+        }
+
+        public string RenderFrame(int t) {
+            var buffer = new StringBuilder(Height * (Width + 2) + 50);
+
             buffer.Append(Environment.NewLine);
+            for (var y = 0; y < Height; y++) {
+                for (var x = 0; x < Width; x++) {
+                    buffer.Append(frames[t][x, y] ? '#' : '.');
+                }
+
+                buffer.Append(Environment.NewLine);
+            }
 
             return buffer.ToString();
         }
 
-        public (int x, int y)[] GetBlizzards((int x, int y) position, int t) {
-            t %= (Height * Width);
+        public string Render(int t, (int x, int y)? position = null) {
+            var xMod = Width - 2;
+            var yMod = Height - 2;
 
-            blizzardCache[position.x, position.y + 1, t] ??= 
-                upBlizzards.Select(b => b with {y = ((b.y - t) % Height + Height) % Height}).Union(
-                        rightBlizzards.Select(b => b with {x = (b.x + t) % Width}).Union(
-                            downBlizzards.Select(b => b with {y = (b.y + t) % Height}).Union(
-                                leftBlizzards.Select(b => b with {x = ((b.x - t) % Width + Width) % Width}))))
-                    .Where(b => b.x == position.x || b.y == position.y)
-                    .ToArray();
+            var blizzards =
+                upBlizzards.Select(b => (b.x, y: ((b.y - t) % yMod + yMod) % yMod, d: '^')).Union(
+                        rightBlizzards.Select(b => (x: (b.x + t) % xMod, b.y, d: '>')).Union(
+                            downBlizzards.Select(b => (b.x, y: (b.y + t) % yMod, d: 'v')).Union(
+                                leftBlizzards.Select(b => (x: ((b.x - t) % xMod + xMod) % xMod, b.y, d: '<')))))
+                    .GroupBy(b => (b.x, b.y))
+                    .ToDictionary(g => g.Key, g => g.Count() == 1 ? g.Single().d : g.Count().ToString()[0]);
 
-            return blizzardCache[position.x, position.y + 1, t];
+            var buffer = new StringBuilder(Height * (Width + 2) + 50);
+            
+            buffer.Append(Environment.NewLine);
+            
+            for (var y = 0; y < Height; y++) {
+                for (var x = 0; x < Width; x++) {
+                    if (position?.x == x && position.Value.y == y) {
+                        buffer.Append('E');
+                        continue;
+                    }
+
+                    buffer.Append(blizzards.TryGetValue((x - 1, y - 1), out var blizzard) ? blizzard : (frames[t][x, y] ? '#' : '.'));
+                }
+
+                buffer.Append(Environment.NewLine);
+            }
+
+            return buffer.ToString();
         }
     }
     
@@ -132,7 +171,7 @@ public class Day24 : Solver {
             var newTime = scenario.time + 1;
             var position = scenario.position;
 
-            var blizzards = map.GetBlizzards(position, newTime);
+            var blizzards = new (int, int)[0];//map.GetBlizzards(position, newTime);
 
             var right = (position.x + 1, position.y);
             var canMoveRight = position.y != -1 && position.x < maxX && !blizzards.Contains(right);
@@ -226,6 +265,77 @@ public class Day24 : Solver {
         const string expected1 = @"
 #.#####
 #.....#
+#.#...#
+#.....#
+#.....#
+#...#.#
+#####.#
+";
+        var actual1 = map.RenderFrame(1);
+        Trace.WriteLine(actual1);
+        Assert.Equal(expected1.ReplaceLineEndings(), actual1);
+
+        const string expected2 = @"
+#.#####
+#...#.#
+#..#..#
+#.....#
+#.....#
+#.....#
+#####.#
+";
+        var actual2 = map.RenderFrame(2);
+        Trace.WriteLine(actual2);
+        Assert.Equal(expected2.ReplaceLineEndings(), actual2);
+
+        const string expected3 = @"
+#.#####
+#.....#
+#...#.#
+#.....#
+#.....#
+#.....#
+#####.#
+";
+        var actual3 = map.RenderFrame(3);
+        Trace.WriteLine(actual3);
+        Assert.Equal(expected3.ReplaceLineEndings(), actual3);
+
+
+        const string expected4 = @"
+#.#####
+#.....#
+#....##
+#...#.#
+#.....#
+#.....#
+#####.#
+";
+        var actual4 = map.RenderFrame(4);
+        Trace.WriteLine(actual4);
+        Assert.Equal(expected4.ReplaceLineEndings(), actual4);
+
+        const string expected5 = @"
+#.#####
+#.....#
+##....#
+#.....#
+#...#.#
+#.....#
+#####.#
+";
+        var actual5 = map.RenderFrame(5);
+        Trace.WriteLine(actual5);
+        Assert.Equal(expected5.ReplaceLineEndings(), actual5);
+    }
+
+    [Fact]
+    public void SimpleExampleBlizzardsRenderCorrectly() {
+        var map = new Map(SimpleExampleInput);
+
+        const string expected1 = @"
+#.#####
+#.....#
 #.>...#
 #.....#
 #.....#
@@ -289,7 +399,6 @@ public class Day24 : Solver {
         Trace.WriteLine(actual5);
         Assert.Equal(expected5.ReplaceLineEndings(), actual5);
     }
-
 
     [Fact]
     public void SolvesPartOneExample() {
