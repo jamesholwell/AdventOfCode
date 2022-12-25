@@ -1,5 +1,4 @@
-﻿using System.Data.Common;
-using System.Text;
+﻿using System.Text;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +12,7 @@ public class Day24 : Solver {
 
         public int Width { get; set; }
 
-        public (int x, int y) StartPosition;
+        public (int x, int y, int t) StartPosition;
 
         public (int x, int y) ExitPosition;
 
@@ -24,10 +23,8 @@ public class Day24 : Solver {
         private readonly List<(int x, int y)> downBlizzards = new();
 
         private readonly List<(int x, int y)> leftBlizzards = new();
-
-        private readonly (int x, int y)[,,][] blizzardCache;
-
-        private readonly bool[][,] frames;
+        
+        public readonly bool[][,] Frames;
 
         public Map(string input, int numberOfFrames = 500) {
             var lines = Shared.Split(input);
@@ -35,7 +32,7 @@ public class Day24 : Solver {
             Height = lines.Length;
             Width = lines[0].Trim().Length;
 
-            StartPosition = (lines[0].IndexOf('.'), 0);
+            StartPosition = (lines[0].IndexOf('.'), 0, 0);
             ExitPosition = (lines[^1].IndexOf('.'), Height - 1);
 
             for (var row = 1; row < Height - 1; row++) {
@@ -62,17 +59,17 @@ public class Day24 : Solver {
                 }
             }
 
-            frames = Enumerable.Range(0, numberOfFrames).Select(_ => new bool[Height, Width]).ToArray();
+            Frames = Enumerable.Range(0, numberOfFrames).Select(_ => new bool[Width, Height]).ToArray();
 
             for (var t = 0; t < numberOfFrames; ++t) {
                 for (var x = 0; x < Width; ++x) {
-                    frames[t][x, 0] = x != StartPosition.x;
-                    frames[t][x, Height - 1] = x != ExitPosition.x;
+                    Frames[t][x, 0] = x != StartPosition.x;
+                    Frames[t][x, Height - 1] = x != ExitPosition.x;
                 }
 
                 for (var y = 1; y < Height - 1; ++y) {
-                    frames[t][0, y] = true;
-                    frames[t][Width - 1, y] = true;
+                    Frames[t][0, y] = true;
+                    Frames[t][Width - 1, y] = true;
                 }
             }
 
@@ -81,25 +78,25 @@ public class Day24 : Solver {
 
             foreach (var b in upBlizzards) {
                 for (var t = 0; t < numberOfFrames; ++t) {
-                    frames[t][1 + b.x, 1 + ((b.y - t) % yMod + yMod) % yMod] = true;
+                    Frames[t][1 + b.x, 1 + ((b.y - t) % yMod + yMod) % yMod] = true;
                 }
             }
 
             foreach (var b in rightBlizzards) {
                 for (var t = 0; t < numberOfFrames; ++t) {
-                    frames[t][1 + (b.x + t) % xMod, 1 + b.y] = true;
+                    Frames[t][1 + (b.x + t) % xMod, 1 + b.y] = true;
                 }
             }
 
             foreach (var b in downBlizzards) {
                 for (var t = 0; t < numberOfFrames; ++t) {
-                    frames[t][1 + b.x, 1 + (b.y + t) % yMod] = true;
+                    Frames[t][1 + b.x, 1 + (b.y + t) % yMod] = true;
                 }
             }
 
             foreach (var b in leftBlizzards) {
                 for (var t = 0; t < numberOfFrames; ++t) {
-                    frames[t][1 + ((b.x - t) % xMod + xMod) % xMod, 1 + b.y] = true;
+                    Frames[t][1 + ((b.x - t) % xMod + xMod) % xMod, 1 + b.y] = true;
                 }
             }
         }
@@ -110,7 +107,7 @@ public class Day24 : Solver {
             buffer.Append(Environment.NewLine);
             for (var y = 0; y < Height; y++) {
                 for (var x = 0; x < Width; x++) {
-                    buffer.Append(frames[t][x, y] ? '#' : '.');
+                    buffer.Append(Frames[t][x, y] ? '#' : '.');
                 }
 
                 buffer.Append(Environment.NewLine);
@@ -142,7 +139,7 @@ public class Day24 : Solver {
                         continue;
                     }
 
-                    buffer.Append(blizzards.TryGetValue((x - 1, y - 1), out var blizzard) ? blizzard : (frames[t][x, y] ? '#' : '.'));
+                    buffer.Append(blizzards.TryGetValue((x - 1, y - 1), out var blizzard) ? blizzard : (Frames[t][x, y] ? '#' : '.'));
                 }
 
                 buffer.Append(Environment.NewLine);
@@ -154,80 +151,105 @@ public class Day24 : Solver {
     
     public override long SolvePartOne() {
         var map = new Map(Input);
-        var maxX = map.Width - 1;
-        var maxY = map.Height - 1;
-        var lowerBound = int.MaxValue;
-        var i = 0;
-        var nextToExit = map.ExitPosition with {y = map.ExitPosition.y - 1};
-        
-        var queue = new PriorityQueue<((int x, int y) position, int time, string direction), int>();
-        queue.Enqueue((map.StartPosition, 0, "start"), 0);
+        var nextToExit = map.ExitPosition with { y = map.ExitPosition.y - 1 };
 
-        while (queue.TryDequeue(out var scenario, out var priority)) {
-            Output.WriteLine($"Minute {scenario.time}, {scenario.direction}:");
-            Output.WriteLine(map.Render(scenario.time, scenario.position));
-            Trace.WriteLine(map.Render(scenario.time + 1));
+        var queue = new PriorityQueue<(int x, int y, int t), int>();
+        var set = new HashSet<(int x, int y, int t)>();
+        queue.Enqueue(map.StartPosition, 0);
+        set.Add(map.StartPosition);
 
-            var newTime = scenario.time + 1;
-            var position = scenario.position;
+        // ReSharper disable once InconsistentNaming - mathematical naming convention
+        int d((int x, int y, int t) p) => map.ExitPosition.x - p.x + map.ExitPosition.y - p.y;
 
-            var blizzards = new (int, int)[0];//map.GetBlizzards(position, newTime);
+        var minimumDistance = new Dictionary<(int x, int y, int t), int> {
+            {map.StartPosition, 0}
+        };
 
-            var right = (position.x + 1, position.y);
-            var canMoveRight = position.y != -1 && position.x < maxX && !blizzards.Contains(right);
+        while (queue.TryDequeue(out var position, out _)) {
+            set.Remove(position);
+            var t = position.t + 1;
+            var currentG = minimumDistance[position];
 
-            var down = (position.x, position.y + 1);
-            var canMoveDown = position.y < maxY && !blizzards.Contains(down);
+            if (position.x == nextToExit.x && position.y == nextToExit.y)
+                return t;
 
-            var left = (position.x - 1, position.y);
-            var canMoveLeft = position.y != -1 && position.x > 0 && !blizzards.Contains(left);
+            // right
+            if (!map.Frames[t][position.x + 1, position.y]) {
+                var positionRight = position with { x = position.x + 1, t = t};
+                var tentativeRight = currentG + 1;
 
-            var up = (position.x, position.y - 1);
-            var canMoveUp = position.y > 0 && !blizzards.Contains(up);
+                if (!minimumDistance.TryGetValue(positionRight, out var gScoreRight) || tentativeRight < gScoreRight) {
+                    minimumDistance[positionRight] = tentativeRight;
 
-            var canWait = !blizzards.Contains(position);
-
-            var trace = "Can move: ";
-            if (canMoveRight) trace += "Right";
-            if (canMoveDown) trace += " Down";
-            if (canMoveLeft) trace += " Left";
-            if (canMoveUp) trace += " Up";
-            if (canWait) trace += " Wait";
-            Trace.WriteLine(trace);
-            Trace.WriteLine();
-
-            var distance = (nextToExit.x - position.x) + (nextToExit.y - position.y);
-            
-            if (newTime + distance >= lowerBound) {
-                continue;
+                    if (!set.Contains(positionRight)) {
+                        set.Add(positionRight);
+                        queue.Enqueue(positionRight, tentativeRight + d(positionRight));
+                    }
+                }
             }
 
-            if (position == nextToExit) {
-                if (newTime < lowerBound)
-                    lowerBound = newTime;
+            // down
+            if (!map.Frames[t][position.x, position.y + 1]) {
+                var positionDown = position with { y = position.y + 1, t = t };
+                var tentativeDown = currentG + 1;
 
-                Output.WriteLine($"Found exit! {newTime}");
+                if (!minimumDistance.TryGetValue(positionDown, out var gScoreDown) || tentativeDown < gScoreDown) {
+                    minimumDistance[positionDown] = tentativeDown;
 
-                continue;
+                    if (!set.Contains(positionDown)) {
+                        set.Add(positionDown);
+                        queue.Enqueue(positionDown, tentativeDown + d(positionDown));
+                    }
+                }
             }
-            
-            if (canMoveRight && scenario.direction != "move left")
-                queue.Enqueue((right, newTime, "move right"), priority - 1);
 
-            if (canMoveDown && scenario.direction != "move up")
-                queue.Enqueue((down, newTime, "move down"), priority - 1);
+            // left
+            if (!map.Frames[t][position.x - 1, position.y]) {
+                var positionLeft = position with { x = position.x - 1, t = t };
+                var tentativeLeft = currentG + 1;
 
-            if (canMoveLeft && newTime + distance + 1 < lowerBound && scenario.direction != "move right")
-                queue.Enqueue((left, newTime, "move left"), priority + 1);
+                if (!minimumDistance.TryGetValue(positionLeft, out var gScoreLeft) || tentativeLeft < gScoreLeft) {
+                    minimumDistance[positionLeft] = tentativeLeft;
 
-            if (canMoveUp && newTime + distance + 1 < lowerBound && scenario.direction != "move down") 
-                queue.Enqueue((up, newTime, "move up"), priority + 1);
+                    if (!set.Contains(positionLeft)) {
+                        set.Add(positionLeft);
+                        queue.Enqueue(positionLeft, tentativeLeft + d(positionLeft));
+                    }
+                }
+            }
 
-            if (canWait && scenario.direction != "wait")
-                queue.Enqueue(scenario with { time = newTime, direction = "wait" }, priority + 1);
+            // up
+            if (position.y > 0 && !map.Frames[t][position.x, position.y - 1]) {
+                var positionUp = position with { y = position.y - 1, t = t };
+                var tentativeUp = currentG + 1;
+
+                if (!minimumDistance.TryGetValue(positionUp, out var gScoreUp) || tentativeUp < gScoreUp) {
+                    minimumDistance[positionUp] = tentativeUp;
+
+                    if (!set.Contains(positionUp)) {
+                        set.Add(positionUp);
+                        queue.Enqueue(positionUp, tentativeUp + d(positionUp));
+                    }
+                }
+            }
+
+            // wait
+            if (!map.Frames[t][position.x, position.y]) {
+                var positionWait = position with { t = t };
+                var tentativeWait = currentG + 1;
+
+                if (!minimumDistance.TryGetValue(positionWait, out var gScoreWait) || tentativeWait < gScoreWait) {
+                    minimumDistance[positionWait] = tentativeWait;
+
+                    if (!set.Contains(positionWait)) {
+                        set.Add(positionWait);
+                        queue.Enqueue(positionWait, tentativeWait + d(positionWait));
+                    }
+                }
+            }
         }
-
-        return lowerBound;
+        
+        throw new InvalidOperationException("No route found");
     }
 
     public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
