@@ -14,7 +14,7 @@ public class Day24 : Solver {
 
         public (int x, int y, int t) StartPosition;
 
-        public (int x, int y) ExitPosition;
+        public (int x, int y, int t) ExitPosition;
 
         private readonly List<(int x, int y)> upBlizzards = new();
 
@@ -26,14 +26,14 @@ public class Day24 : Solver {
         
         public readonly bool[][,] Frames;
 
-        public Map(string input, int numberOfFrames = 500) {
+        public Map(string input, int numberOfFrames = 1000) {
             var lines = Shared.Split(input);
 
             Height = lines.Length;
             Width = lines[0].Trim().Length;
 
             StartPosition = (lines[0].IndexOf('.'), 0, 0);
-            ExitPosition = (lines[^1].IndexOf('.'), Height - 1);
+            ExitPosition = (lines[^1].IndexOf('.'), Height - 1, 0);
 
             for (var row = 1; row < Height - 1; row++) {
                 for (var column = 1; column < Width - 1; column++) {
@@ -151,18 +151,30 @@ public class Day24 : Solver {
     
     public override long SolvePartOne() {
         var map = new Map(Input);
-        var nextToExit = map.ExitPosition with { y = map.ExitPosition.y - 1 };
+        return Solve(map, map.StartPosition, map.ExitPosition);
+    }
 
+    public override long SolvePartTwo() {
+        var map = new Map(Input);
+
+        var trip1 = Solve(map, map.StartPosition, map.ExitPosition);
+        var trip2 = Solve(map, map.ExitPosition with { t = trip1 }, map.StartPosition);
+        var trip3 = Solve(map, map.StartPosition with { t = trip2 }, map.ExitPosition);
+
+        return trip3;
+    }
+
+    private static int Solve(Map map, (int x, int y, int t) startPosition, (int x, int y, int _) targetPosition) {
         var queue = new PriorityQueue<(int x, int y, int t), int>();
         var set = new HashSet<(int x, int y, int t)>();
-        queue.Enqueue(map.StartPosition, 0);
-        set.Add(map.StartPosition);
+        queue.Enqueue(startPosition, 0);
+        set.Add(startPosition);
 
         // ReSharper disable once InconsistentNaming - mathematical naming convention
         int d((int x, int y, int t) p) => map.ExitPosition.x - p.x + map.ExitPosition.y - p.y;
 
         var minimumDistance = new Dictionary<(int x, int y, int t), int> {
-            {map.StartPosition, 0}
+            {startPosition, 0}
         };
 
         while (queue.TryDequeue(out var position, out _)) {
@@ -170,12 +182,12 @@ public class Day24 : Solver {
             var t = position.t + 1;
             var currentG = minimumDistance[position];
 
-            if (position.x == nextToExit.x && position.y == nextToExit.y)
-                return t;
+            if (position.x == targetPosition.x && position.y == targetPosition.y)
+                return position.t;
 
             // right
             if (!map.Frames[t][position.x + 1, position.y]) {
-                var positionRight = position with { x = position.x + 1, t = t};
+                var positionRight = position with {x = position.x + 1, t = t};
                 var tentativeRight = currentG + 1;
 
                 if (!minimumDistance.TryGetValue(positionRight, out var gScoreRight) || tentativeRight < gScoreRight) {
@@ -189,8 +201,8 @@ public class Day24 : Solver {
             }
 
             // down
-            if (!map.Frames[t][position.x, position.y + 1]) {
-                var positionDown = position with { y = position.y + 1, t = t };
+            if (position.y < map.Height - 1 && !map.Frames[t][position.x, position.y + 1]) {
+                var positionDown = position with {y = position.y + 1, t = t};
                 var tentativeDown = currentG + 1;
 
                 if (!minimumDistance.TryGetValue(positionDown, out var gScoreDown) || tentativeDown < gScoreDown) {
@@ -205,7 +217,7 @@ public class Day24 : Solver {
 
             // left
             if (!map.Frames[t][position.x - 1, position.y]) {
-                var positionLeft = position with { x = position.x - 1, t = t };
+                var positionLeft = position with {x = position.x - 1, t = t};
                 var tentativeLeft = currentG + 1;
 
                 if (!minimumDistance.TryGetValue(positionLeft, out var gScoreLeft) || tentativeLeft < gScoreLeft) {
@@ -220,7 +232,7 @@ public class Day24 : Solver {
 
             // up
             if (position.y > 0 && !map.Frames[t][position.x, position.y - 1]) {
-                var positionUp = position with { y = position.y - 1, t = t };
+                var positionUp = position with {y = position.y - 1, t = t};
                 var tentativeUp = currentG + 1;
 
                 if (!minimumDistance.TryGetValue(positionUp, out var gScoreUp) || tentativeUp < gScoreUp) {
@@ -235,7 +247,7 @@ public class Day24 : Solver {
 
             // wait
             if (!map.Frames[t][position.x, position.y]) {
-                var positionWait = position with { t = t };
+                var positionWait = position with {t = t};
                 var tentativeWait = currentG + 1;
 
                 if (!minimumDistance.TryGetValue(positionWait, out var gScoreWait) || tentativeWait < gScoreWait) {
@@ -248,11 +260,9 @@ public class Day24 : Solver {
                 }
             }
         }
-        
+
         throw new InvalidOperationException("No route found");
     }
-
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
 
     private const string SimpleExampleInput = @"
 #.#####
@@ -426,5 +436,11 @@ public class Day24 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day24(ExampleInput, Output).SolvePartOne();
         Assert.Equal(18, actual);
+    }
+
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day24(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(54, actual);
     }
 }
