@@ -106,7 +106,7 @@ public class Day24 : Solver {
                         rightBlizzards.Select(b => b with {x = (b.x + t) % Width}).Union(
                             downBlizzards.Select(b => b with {y = (b.y + t) % Height}).Union(
                                 leftBlizzards.Select(b => b with {x = ((b.x - t) % Width + Width) % Width}))))
-                    .Where(b => b.x == position.x || b.y == position.y)
+                    .Where(b => Math.Abs(b.x - position.x) < 2 && Math.Abs(b.y - position.y) < 2)
                     .ToArray();
 
             return blizzardCache[position.x, position.y + 1, t];
@@ -117,78 +117,120 @@ public class Day24 : Solver {
         var map = new Map(Input);
         var maxX = map.Width - 1;
         var maxY = map.Height - 1;
-        var lowerBound = int.MaxValue;
         var i = 0;
         var nextToExit = map.ExitPosition with {y = map.ExitPosition.y - 1};
         
-        var queue = new PriorityQueue<((int x, int y) position, int time, string direction), int>();
-        queue.Enqueue((map.StartPosition, 0, "start"), 0);
+        var queue = new PriorityQueue<((int x, int y) position, int time), int>();
+        queue.Enqueue((map.StartPosition, 0), map.Height + 1 + map.Width);
+        var set = new HashSet<((int x, int y) position, int time)>();
+        set.Add(queue.Peek());
+
+        var shortest = new Dictionary<((int x, int y) position, int time), int>();
+        shortest.Add(queue.Peek(), 0);
 
         while (queue.TryDequeue(out var scenario, out var priority)) {
-            Output.WriteLine($"Minute {scenario.time}, {scenario.direction}:");
-            Output.WriteLine(map.Render(scenario.time, scenario.position));
-            Trace.WriteLine(map.Render(scenario.time + 1));
+            set.Remove(scenario);
+            //Trace.WriteLine($"Minute {scenario.time}, {scenario.direction}:");
+            //Trace.WriteLine(map.Render(scenario.time, scenario.position));
+            //Trace.WriteLine(map.Render(scenario.time + 1));
 
             var newTime = scenario.time + 1;
             var position = scenario.position;
+            var score = shortest[scenario];
 
             var blizzards = map.GetBlizzards(position, newTime);
 
-            var right = (position.x + 1, position.y);
+            var right = position with { x = position.x + 1 };
             var canMoveRight = position.y != -1 && position.x < maxX && !blizzards.Contains(right);
 
-            var down = (position.x, position.y + 1);
+            var down = position with { y = position.y + 1 };
             var canMoveDown = position.y < maxY && !blizzards.Contains(down);
 
-            var left = (position.x - 1, position.y);
+            var left = position with { x = position.x - 1 };
             var canMoveLeft = position.y != -1 && position.x > 0 && !blizzards.Contains(left);
 
-            var up = (position.x, position.y - 1);
+            var up = position with { y = position.y - 1 };
             var canMoveUp = position.y > 0 && !blizzards.Contains(up);
 
             var canWait = !blizzards.Contains(position);
 
-            var trace = "Can move: ";
-            if (canMoveRight) trace += "Right";
-            if (canMoveDown) trace += " Down";
-            if (canMoveLeft) trace += " Left";
-            if (canMoveUp) trace += " Up";
-            if (canWait) trace += " Wait";
-            Trace.WriteLine(trace);
-            Trace.WriteLine();
-
-            var distance = (nextToExit.x - position.x) + (nextToExit.y - position.y);
+            //var trace = "Can move: ";
+            //if (canMoveRight) trace += "Right";
+            //if (canMoveDown) trace += " Down";
+            //if (canMoveLeft) trace += " Left";
+            //if (canMoveUp) trace += " Up";
+            //if (canWait) trace += " Wait";
+            //Trace.WriteLine(trace);
+            //Trace.WriteLine();
             
-            if (newTime + distance >= lowerBound) {
-                continue;
-            }
-
             if (position == nextToExit) {
-                if (newTime < lowerBound)
-                    lowerBound = newTime;
-
-                Output.WriteLine($"Found exit! {newTime}");
-
-                continue;
+                return newTime;
             }
-            
-            if (canMoveRight && scenario.direction != "move left")
-                queue.Enqueue((right, newTime, "move right"), priority - 1);
 
-            if (canMoveDown && scenario.direction != "move up")
-                queue.Enqueue((down, newTime, "move down"), priority - 1);
+            if (canMoveRight) {
+                var rp = (right, newTime);
 
-            if (canMoveLeft && newTime + distance + 1 < lowerBound && scenario.direction != "move right")
-                queue.Enqueue((left, newTime, "move left"), priority + 1);
+                if (!shortest.TryGetValue(rp, out var rs) || score + 1 < rs) {
+                    shortest[rp] = score + 1;
+                    if (!set.Contains(rp)) {
+                        queue.Enqueue(rp, score + 1 + map.ExitPosition.x - right.x + map.ExitPosition.y - right.y);
+                        set.Add(rp);
+                    }
+                }
+            }
 
-            if (canMoveUp && newTime + distance + 1 < lowerBound && scenario.direction != "move down") 
-                queue.Enqueue((up, newTime, "move up"), priority + 1);
+            if (canMoveDown) {
+                var dp = (down, newTime);
 
-            if (canWait && scenario.direction != "wait")
-                queue.Enqueue(scenario with { time = newTime, direction = "wait" }, priority + 1);
+                if (!shortest.TryGetValue(dp, out var ds) || score + 1 < ds) {
+                    shortest[dp] = score + 1;
+                    if (!set.Contains(dp)) {
+                        queue.Enqueue(dp, score + 1 + map.ExitPosition.x - down.x + map.ExitPosition.y - down.y);
+                        set.Add(dp);
+                    }
+                }
+            }
+
+            if (canMoveLeft) {
+                var lp = (left, newTime);
+
+                if (!shortest.TryGetValue(lp, out var ls) || score + 1 < ls) {
+                    shortest[lp] = score + 1;
+                    if (!set.Contains(lp)) {
+                        queue.Enqueue(lp, score + 1 + map.ExitPosition.x - left.x + map.ExitPosition.y - left.y);
+                        set.Add(lp);
+                    }
+                }
+            }
+
+            if (canMoveUp) {
+                var upp = (up, newTime);
+
+                if (!shortest.TryGetValue(upp, out var us) || score + 1 < us) {
+                    shortest[upp] = score + 1;
+                    if (!set.Contains(upp)) {
+                        queue.Enqueue(upp, score + 1 + map.ExitPosition.x - up.x + map.ExitPosition.y - up.y);
+                        set.Add(upp);
+                    }
+                }
+            }
+
+            if (canWait) {
+                var wp = scenario with { time = newTime };
+
+                if (!shortest.TryGetValue(wp, out var ws) || score + 1 < ws) {
+                    shortest[wp] = score + 1;
+                    if (!set.Contains(wp)) {
+                        queue.Enqueue(wp,
+                            score + 1 + map.ExitPosition.x - position.x + map.ExitPosition.y - position.y);
+                        set.Add(wp);
+                    }
+                }
+
+            }
         }
 
-        return lowerBound;
+        throw new InvalidOperationException();
     }
 
     public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
