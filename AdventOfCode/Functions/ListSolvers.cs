@@ -14,7 +14,7 @@ internal class ListSolvers {
     }
 
     public void Execute() {
-        var solvers = factory.List().OrderBy(k => k).ToArray();
+        var solvers = factory.List().ToArray();
 
         if (!solvers.Any()) {
             Console.ForegroundColor = ConsoleColor.DarkRed;

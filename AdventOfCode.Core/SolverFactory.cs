@@ -3,10 +3,10 @@ using System.Reflection;
 namespace AdventOfCode.Core;
 
 public class SolverFactory {
-    private readonly Dictionary<string, Type> solvers;
+    private readonly IDictionary<string, Type> solvers;
 
     public SolverFactory() {
-        solvers = new Dictionary<string, Type>();
+        solvers = new SortedDictionary<string, Type>(new SolverComparer());
     }
 
     public ISolver? Create(string day, string @event, string input, string? solver = null) {
