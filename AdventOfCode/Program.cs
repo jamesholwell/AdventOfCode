@@ -1,43 +1,46 @@
 ﻿using System.CommandLine;
-using System.CommandLine.Parsing;
 using AdventOfCode.Core;
 using AdventOfCode.Functions;
 
-PuzzleSpecification PuzzleSpecificationParser(ArgumentResult result) {
-    var spec = new PuzzleSpecification();
-    var taken = 0;
+var factory =
+    new SolverFactory()
+        .AddAssembly<AdventOfCode.CSharp.TemplateSolver>("csharp")
+        .AddAssembly<AdventOfCode.FSharp.TemplateSolver>("fsharp");
 
-    foreach (var token in result.Tokens) {
-        var value = token.Value;
-        ++taken;
+var puzzleArgument =
+    new Argument<PuzzleSpecification>(
+        "puzzle",
+        description: "Puzzle to solve e.g. 'day1' or '2015 day1' or 'day3 part2'",
+        parse: result => {
+            var spec = new PuzzleSpecification();
+            var taken = 0;
 
-        if (value.StartsWith("-")) break;
+            foreach (var token in result.Tokens) {
+                var value = token.Value;
+                ++taken;
 
-        if (value.StartsWith("day"))
-            spec.Day = value;
+                if (value.StartsWith("-")) break;
 
-        else if (value.StartsWith("pt"))
-            spec.IsPartTwo = "pt2".Equals(value, StringComparison.OrdinalIgnoreCase);
+                if (value.StartsWith("day"))
+                    spec.Day = value;
 
-        else if (value.StartsWith("part"))
-            spec.IsPartTwo = "part2".Equals(value, StringComparison.OrdinalIgnoreCase);
+                else if (value.StartsWith("pt"))
+                    spec.IsPartTwo = "pt2".Equals(value, StringComparison.OrdinalIgnoreCase);
 
-        else if (value.StartsWith("20"))
-            spec.Event = value;
+                else if (value.StartsWith("part"))
+                    spec.IsPartTwo = "part2".Equals(value, StringComparison.OrdinalIgnoreCase);
 
-        else
-            spec.SolverHint = value;
-    }
+                else if (value.StartsWith("20"))
+                    spec.Event = value;
 
-    result.OnlyTake(taken);
+                else
+                    spec.SolverHint = value;
+            }
 
-    return spec;
-}
+            result.OnlyTake(taken);
 
-var puzzleArgument = new Argument<PuzzleSpecification>(
-    "puzzle",
-    description: "Puzzle to solve e.g. 'day1' or '2015 day1' or 'day3 part2'",
-    parse: PuzzleSpecificationParser) {Arity = ArgumentArity.ZeroOrMore};
+            return spec;
+        }) { Arity = ArgumentArity.ZeroOrMore };
 
 var listArgument = new Option<bool>(
     "--list",
@@ -47,25 +50,10 @@ var benchmarkArgument = new Option<bool>(
     "--bench",
     "Benchmark solver performance");
 
-var root = new RootCommand {puzzleArgument, listArgument, benchmarkArgument};
+var root = new RootCommand { puzzleArgument, listArgument, benchmarkArgument };
 
 root.SetHandler(context => {
-    var factory =
-        new SolverFactory()
-            .AddAssembly<AdventOfCode.CSharp.TemplateSolver>("csharp")
-            .AddAssembly<AdventOfCode.FSharp.TemplateSolver>("fsharp");
-
-
-    var isListing = context.ParseResult.GetValueForOption(listArgument);
-
-    if (isListing) {
-        new ListSolvers(context.Console, factory).Execute();
-
-        return;
-    }
-
     var puzzle = context.ParseResult.GetValueForArgument(puzzleArgument);
-    var isBenchmarking = context.ParseResult.GetValueForOption(benchmarkArgument);
 
     if (string.IsNullOrWhiteSpace(puzzle.Day) && DateTime.UtcNow.Month == 12)
         puzzle.Day = $"day{DateTime.UtcNow.Day}";
@@ -73,6 +61,15 @@ root.SetHandler(context => {
     if (string.IsNullOrWhiteSpace(puzzle.Event))
         puzzle.Event = DateTime.UtcNow.AddYears(DateTime.UtcNow.Month < 12 ? -1 : 0).Year.ToString();
 
+    var isListing = context.ParseResult.GetValueForOption(listArgument);
+    if (isListing ||
+        string.IsNullOrWhiteSpace(puzzle.Event) ||
+        string.IsNullOrWhiteSpace(puzzle.Day)) {
+        new ListSolvers(context.Console, factory).Execute();
+        return;
+    }
+
+    var isBenchmarking = context.ParseResult.GetValueForOption(benchmarkArgument);
     if (isBenchmarking)
         new BenchmarkSolvers(context.Console, factory).Execute(puzzle);
     else
