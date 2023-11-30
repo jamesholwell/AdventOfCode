@@ -8,6 +8,13 @@
     <ItemGroup>
         <Compile Include="Shared.fs" />
         <Compile Include="Template.fs" />
+        <Compile Include="2022\Day1.fs" />
+        <Compile Include="2022\Day2.fs" />
+        <Compile Include="2022\Day3.fs" />
+        <Compile Include="2022\Day4.fs" />
+        <Compile Include="2022\Day5.fs" />
+        <Compile Include="2022\Day6.fs" />
+        <Compile Include="2022\Day7.fs" />
     </ItemGroup>
 
     <ItemGroup>
