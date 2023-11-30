@@ -15,7 +15,14 @@ internal class RunSolver {
     }
 
     public void Execute(PuzzleSpecification puzzle) {
-        if (!Utilities.TryReadInput(puzzle, out var input, console)) return;
+        if (!Utilities.TryReadInput(puzzle, out var input, console)) {
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            console.WriteLine("Unable to read puzzle input");
+            Console.ResetColor();
+
+            console.WriteLine(string.Empty);
+            return;
+        }
 
         // resolve solver
         ISolver? solver;
