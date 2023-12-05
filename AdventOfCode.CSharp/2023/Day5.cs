@@ -85,8 +85,89 @@ public class Day5 : Solver {
         return locations.Min();
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
 
+    public override long SolvePartTwo() {
+        var sections = Input.SplitBy("\n\n");
+        
+        var seedpairs = sections[0].Split(':', 2)[1]
+            .Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(long.Parse).ToArray();
+
+        var lookup = new Dictionary<string, List<(long sourceOffset, long destinationOffset, long length)>>();
+
+        foreach (var section in sections.Skip(1)) {
+            var parts = section.Split(" map:");
+
+            var mapParts = parts[0].Split("-to-");
+            var key = mapParts[0];
+            // var source = mapParts[0];
+            // var destination = mapParts[1];
+            if (!lookup.ContainsKey(key))
+                lookup[key] = new List<(long, long, long)>(); 
+            
+            foreach (var range in Shared.Split(parts[1])) {
+                var rangeParts = range.Split(' ', StringSplitOptions.TrimEntries).Select(long.Parse).ToArray();
+                var sourceOffset = rangeParts[1];
+                var destinationOffset = rangeParts[0];
+                var length = rangeParts[2];
+
+                lookup[key].Add((sourceOffset, destinationOffset, length));
+            }
+        }
+
+        var minLocation = long.MaxValue;
+        var minLocationLock = new object();
+        var i = 0L;
+        
+        var seeds = new List<long>((int)1e9);
+        foreach (var seedpair in seedpairs.Chunk(2)) {
+            var start = seedpair.First();
+            var length = (int)seedpair.Last();
+            seeds.AddRange(Enumerable.Range(0, length).Select(j => start + j));
+        }
+
+        var count = seeds.Count;
+        Output.WriteLine(count);
+        
+        seeds.AsParallel().ForAll(s => {
+            var category = "seed";
+            long index = s;
+
+            while (category != "location") {
+                var index1 = index;
+                var match = lookup[category].FirstOrDefault(l =>
+                    l.sourceOffset <= index1 && index1 < l.sourceOffset + l.length);
+
+                if (match != default((long, long, long))) {
+                    index = index - match.sourceOffset + match.destinationOffset;
+                }
+
+                category = category switch {
+                    "seed" => "soil",
+                    "soil" => "fertilizer",
+                    "fertilizer" => "water",
+                    "water" => "light",
+                    "light" => "temperature",
+                    "temperature" => "humidity",
+                    "humidity" => "location",
+                    _ => category
+                };
+            }
+
+            if (index < minLocation) {
+                lock (minLocationLock) {
+                    if (index < minLocation) {
+                        minLocation = index;
+                    }
+                }
+            }
+
+            if (++i % 1e8 == 0) {
+                Output.WriteLine($"{100 * i / count:N1}% complete");
+            }
+        });
+
+        return minLocation;
+    }
     private const string? ExampleInput = @"
 seeds: 79 14 55 13
 
@@ -127,5 +208,11 @@ humidity-to-location map:
     public void SolvesPartOneExample() {
         var actual = new Day5(ExampleInput, Output).SolvePartOne();
         Assert.Equal(35, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day5(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(46, actual);
     }
 }
