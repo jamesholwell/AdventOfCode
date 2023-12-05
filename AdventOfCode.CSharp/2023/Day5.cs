@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.Diagnostics;
+
 using Xunit;
 using Xunit.Abstractions;
 
@@ -9,7 +10,7 @@ public class Day5 : Solver {
 
     public override long SolvePartOne() {
         var sections = Input.SplitBy("\n\n");
-        
+
         var seeds = sections[0].Split(':', 2)[1]
             .Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(long.Parse).ToArray();
 
@@ -23,8 +24,8 @@ public class Day5 : Solver {
             // var source = mapParts[0];
             // var destination = mapParts[1];
             if (!lookup.ContainsKey(key))
-                lookup[key] = new List<(long, long, long)>(); 
-            
+                lookup[key] = new List<(long, long, long)>();
+
             foreach (var range in Shared.Split(parts[1])) {
                 var rangeParts = range.Split(' ', StringSplitOptions.TrimEntries).Select(long.Parse).ToArray();
                 var sourceOffset = rangeParts[1];
@@ -36,7 +37,7 @@ public class Day5 : Solver {
         }
 
         var locations = new List<long>();
-        
+
         foreach (var seed in seeds) {
             var category = "seed";
             var index = seed;
@@ -44,7 +45,7 @@ public class Day5 : Solver {
             while (category != "location") {
                 Output.WriteLine($"{category} {index} -> ");
                 var match = lookup[category].FirstOrDefault(l =>
-                    l.sourceOffset <= index && index < l.sourceOffset + l.length);
+                        l.sourceOffset <= index && index < l.sourceOffset + l.length);
 
                 if (match != default((long, long, long))) {
                     Output.WriteLine($"Matched {match.sourceOffset} {match.destinationOffset} {match.length}");
@@ -75,20 +76,20 @@ public class Day5 : Solver {
                         break;
                 }
             }
-            
+
             Output.WriteLine($"{category} {index}");
             Output.WriteLine();
             locations.Add(index);
             Output.WriteLine($"{category} = {index}");
         }
-        
+
         return locations.Min();
     }
 
 
     public override long SolvePartTwo() {
         var sections = Input.SplitBy("\n\n");
-        
+
         var seedpairs = sections[0].Split(':', 2)[1]
             .Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(long.Parse).ToArray();
 
@@ -99,11 +100,9 @@ public class Day5 : Solver {
 
             var mapParts = parts[0].Split("-to-");
             var key = mapParts[0];
-            // var source = mapParts[0];
-            // var destination = mapParts[1];
             if (!lookup.ContainsKey(key))
-                lookup[key] = new List<(long, long, long)>(); 
-            
+                lookup[key] = new List<(long, long, long)>();
+
             foreach (var range in Shared.Split(parts[1])) {
                 var rangeParts = range.Split(' ', StringSplitOptions.TrimEntries).Select(long.Parse).ToArray();
                 var sourceOffset = rangeParts[1];
@@ -117,57 +116,60 @@ public class Day5 : Solver {
         var minLocation = long.MaxValue;
         var minLocationLock = new object();
         var i = 0L;
-        
-        var seeds = new List<long>((int)1e9);
+
+        var count = seedpairs.Chunk(2).Select(sp => sp[1]).Sum();
+
         foreach (var seedpair in seedpairs.Chunk(2)) {
             var start = seedpair.First();
-            var length = (int)seedpair.Last();
-            seeds.AddRange(Enumerable.Range(0, length).Select(j => start + j));
-        }
+            var length = seedpair.Last();
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            
+            Parallel.For(start, start + length, s => {
+                var category = "seed";
+                long index = s;
 
-        var count = seeds.Count;
-        Output.WriteLine(count);
-        
-        seeds.AsParallel().ForAll(s => {
-            var category = "seed";
-            long index = s;
-
-            while (category != "location") {
-                var index1 = index;
+                while (category != "location") {
+                    var index1 = index;
                 var match = lookup[category].FirstOrDefault(l =>
                     l.sourceOffset <= index1 && index1 < l.sourceOffset + l.length);
 
-                if (match != default((long, long, long))) {
-                    index = index - match.sourceOffset + match.destinationOffset;
+                    if (match != default((long, long, long))) {
+                        index = index - match.sourceOffset + match.destinationOffset;
+                    }
+
+                    category = category switch {
+                        "seed" => "soil",
+                        "soil" => "fertilizer",
+                        "fertilizer" => "water",
+                        "water" => "light",
+                        "light" => "temperature",
+                        "temperature" => "humidity",
+                        "humidity" => "location",
+                        _ => category
+                    };
                 }
 
-                category = category switch {
-                    "seed" => "soil",
-                    "soil" => "fertilizer",
-                    "fertilizer" => "water",
-                    "water" => "light",
-                    "light" => "temperature",
-                    "temperature" => "humidity",
-                    "humidity" => "location",
-                    _ => category
-                };
-            }
-
-            if (index < minLocation) {
-                lock (minLocationLock) {
-                    if (index < minLocation) {
-                        minLocation = index;
+                if (index < minLocation) {
+                    lock (minLocationLock) {
+                        if (index < minLocation) {
+                            minLocation = index;
+                        }
                     }
                 }
-            }
 
-            if (++i % 1e8 == 0) {
-                Output.WriteLine($"{100 * i / count:N1}% complete");
-            }
-        });
+                if (++i % 1e8 == 0) {
+                    Output.WriteLine($"{100 * i / count:N1}% complete");
+                }
+            });
+
+            stopwatch.Stop();
+            Output.WriteLine($"Did {length} runs in {stopwatch.ElapsedMilliseconds:N0}ms");
+        }
 
         return minLocation;
     }
+
     private const string? ExampleInput = @"
 seeds: 79 14 55 13
 
@@ -209,7 +211,7 @@ humidity-to-location map:
         var actual = new Day5(ExampleInput, Output).SolvePartOne();
         Assert.Equal(35, actual);
     }
-    
+
     [Fact]
     public void SolvesPartTwoExample() {
         var actual = new Day5(ExampleInput, Output).SolvePartTwo();
