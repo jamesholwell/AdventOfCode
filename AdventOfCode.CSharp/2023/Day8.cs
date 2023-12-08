@@ -22,25 +22,68 @@ public class Day8 : Solver {
 
         return offset;
     }
-    
+
     public override long SolvePartTwo() {
         var (instructions, left, right) = Parse(Input);
-
-        var positions = left.Keys.Where(k => k[2] == 'A').ToArray();
-        var numberOfPositions = positions.Length;
-        var offset = 0;
         var modulus = instructions.Length;
 
-        while (positions.Any(p => p[2] != 'Z')) {
-            for (var i = 0; i < numberOfPositions; ++i) {
-                if (instructions[offset++ % modulus])
-                    positions[i] = right[positions[i]];
+        var startingPositions = left.Keys.Where(k => k[2] == 'A').ToArray();
+        var endingPositions = left.Keys.Where(k => k[2] == 'Z').ToArray();
+        Output.WriteLine($"Found {startingPositions.Length} starting positions and {endingPositions.Length} nodes ending with Z");
+        
+        var positions = startingPositions.ToArray();
+        var multiples = new List<int>();
+
+        for (var g = 0; g < startingPositions.Length; ++g) {
+            var i = 0;
+            Output.WriteLine($"Ghost {g} starts at {startingPositions[g]}:");
+
+            while (positions[g][2] != 'Z') {
+                if (instructions[i++ % modulus])
+                    positions[g] = right[positions[g]];
                 else
-                    positions[i] = left[positions[i]];
+                    positions[g] = left[positions[g]];
+            }
+
+            Output.WriteLine($"  ...found Z after {i} steps");
+            multiples.Add(i);
+            
+            for (var j = 0; j < 5; ++j) {
+                var initial = i;
+
+                if (instructions[i++ % modulus])
+                    positions[g] = right[positions[g]];
+                else
+                    positions[g] = left[positions[g]];
+
+                while (positions[g][2] != 'Z') {
+                    if (instructions[i++ % modulus])
+                        positions[g] = right[positions[g]];
+                    else
+                        positions[g] = left[positions[g]];
+                }
+
+                Output.WriteLine($"  ...found Z again after {i - initial} more steps");
             }
         }
 
-        return offset;
+        return multiples.Select(i => (long)i).Aggregate(lcm);
+
+        // ReSharper disable once InconsistentNaming - this is the mathematical name
+        static long lcm(long a, long b) {
+            return (a / gcf(a, b)) * b;
+        }
+
+        // ReSharper disable once InconsistentNaming - this is the mathematical name
+        static long gcf(long a, long b) {
+            while (b != 0) {
+                var temp = b;
+                b = a % b;
+                a = temp;
+            }
+
+            return a;
+        }
     }
 
     private (bool[] instructions, Dictionary<string, string> left, Dictionary<string, string> right) Parse(string input) {
@@ -106,7 +149,7 @@ XXX = (XXX, XXX)
     
     [Fact]
     public void SolvesPartTwoExample3() {
-        var actual = new Day8(ExampleInput2, Output).SolvePartTwo();
+        var actual = new Day8(ExampleInput3, Output).SolvePartTwo();
         Assert.Equal(6, actual);
     }
 }
