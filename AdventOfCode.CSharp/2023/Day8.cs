@@ -22,6 +22,26 @@ public class Day8 : Solver {
 
         return offset;
     }
+    
+    public override long SolvePartTwo() {
+        var (instructions, left, right) = Parse(Input);
+
+        var positions = left.Keys.Where(k => k[2] == 'A').ToArray();
+        var numberOfPositions = positions.Length;
+        var offset = 0;
+        var modulus = instructions.Length;
+
+        while (positions.Any(p => p[2] != 'Z')) {
+            for (var i = 0; i < numberOfPositions; ++i) {
+                if (instructions[offset++ % modulus])
+                    positions[i] = right[positions[i]];
+                else
+                    positions[i] = left[positions[i]];
+            }
+        }
+
+        return offset;
+    }
 
     private (bool[] instructions, Dictionary<string, string> left, Dictionary<string, string> right) Parse(string input) {
         var outerParts = input.SplitBy("\n\n");
@@ -38,9 +58,7 @@ public class Day8 : Solver {
 
         return (instructions, left, right);
     }
-
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
-
+    
     private const string? ExampleInput1 = @"
 RL
 
@@ -60,7 +78,20 @@ AAA = (BBB, BBB)
 BBB = (AAA, ZZZ)
 ZZZ = (ZZZ, ZZZ)
 ";
+    
+    private const string? ExampleInput3 = @"
+LR
 
+11A = (11B, XXX)
+11B = (XXX, 11Z)
+11Z = (11B, XXX)
+22A = (22B, XXX)
+22B = (22C, 22C)
+22C = (22Z, 22Z)
+22Z = (22B, 22B)
+XXX = (XXX, XXX)
+";
+    
     [Fact]
     public void SolvesPartOneExample1() {
         var actual = new Day8(ExampleInput1, Output).SolvePartOne();
@@ -70,6 +101,12 @@ ZZZ = (ZZZ, ZZZ)
     [Fact]
     public void SolvesPartOneExample2() {
         var actual = new Day8(ExampleInput2, Output).SolvePartOne();
+        Assert.Equal(6, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample3() {
+        var actual = new Day8(ExampleInput2, Output).SolvePartTwo();
         Assert.Equal(6, actual);
     }
 }
