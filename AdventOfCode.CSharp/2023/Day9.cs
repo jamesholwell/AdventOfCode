@@ -31,7 +31,33 @@ public class Day9 : Solver {
         return accumulator.Sum();
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        
+        var accumulator = new List<int>();
+
+        foreach (var line in Shared.Split(Input)) {
+            var values = line.SplitBy(" ").Select(int.Parse).ToArray();
+
+            var queue = new Queue<int[]>();
+            queue.Enqueue(values);
+
+            while (values.Any(v => v != 0)) {
+                var c = values.Length - 1;
+                var next = new int[c];
+                for (var i = 0; i < c; ++i)
+                    next[i] = values[i + 1] - values[i];
+
+                values = next;
+                queue.Enqueue(next);
+            }
+
+            var seed = queue.Dequeue()[0];
+            var j = 0;
+            accumulator.Add(queue.Aggregate(seed, (acc, el) => acc + el[0] * (1 - 2 * (++j % 2))));
+        }
+
+        return accumulator.Sum();
+    }
 
     private const string? ExampleInput = @"
 0 3 6 9 12 15
@@ -43,5 +69,11 @@ public class Day9 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day9(ExampleInput, Output).SolvePartOne();
         Assert.Equal(114, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day9(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(2, actual);
     }
 }
