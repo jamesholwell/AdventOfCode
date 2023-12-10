@@ -1,24 +1,80 @@
-﻿using System.Transactions;
-using Xunit;
+﻿using Xunit;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2023;
 
 public class Day10 : Solver {
-    private readonly char[,] grid;
-    private readonly int[,] distances;
-    private readonly int sx;
-    private readonly int sy;
+    public Day10(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
 
-    public Day10(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) {
+    public override long SolvePartOne() {
+        var grid = InitialiseGrid(out var sx, out var sy);
+        ShowGrid(grid);
+
+        var distances = InitialiseDistances(grid, sx, sy, out var maxDistance);
+        ShowDistances(distances);
+
+        return maxDistance;
+    }
+
+    public override long SolvePartTwo() {
+        var grid = InitialiseGrid(out var sx, out var sy);
+        var distances = InitialiseDistances(grid, sx, sy, out _);
+
+        var height = grid.GetLength(0);
+        var width = grid.GetLength(1);
+        var points = new char[height, width];
+        
+        // ignore everything not on the loop
+        for (var y = 0; y < height; ++y) {
+            for (var x = 0; x < width; ++x) {
+                if (distances[y, x] == -1)
+                    grid[y, x] = '.';
+            }
+        }
+        
+        ShowGrid(grid);
+        
+        var enclosedPoints = 0;
+
+        // for every point, use the ray casting algorithm to determine if the point is on the interior
+        for (var y = 0; y < height; ++y) {
+            for (var x = 0; x < width; ++x) {
+                points[y, x] = grid[y, x];
+
+                // already on the loop, ignore
+                if (distances[y, x] > -1)
+                    continue;
+                
+                // send a ray to the edge
+                var intersections = 0;
+                for (var trace = x; trace >= 0; --trace) {
+                    // we consider our ray at the "top edge" of the cell, i.e it passes above F-7 but through LJ or |
+                    if (grid[y, trace] == '|' || grid[y, trace] == 'L' || grid[y, trace] == 'J')
+                        intersections++;
+                }
+                
+                // and odd number of intersections means the point is in the curve
+                if (intersections % 2 == 1) {
+                    points[y, x] = '#';
+                    enclosedPoints++;
+                }
+            }
+        }
+
+        ShowInterior(points); 
+        
+        return enclosedPoints;
+    }
+
+    private char[,] InitialiseGrid(out int sx, out int sy) {
         var splitInput = Shared.Split(Input);
         var height = splitInput.Length + 2;
         var width = splitInput[0].Length + 2;
         
-        grid = new char[height, width];
-        distances = new int[height, width];
+        var grid = new char[height, width];
         sx = -1;
         sy = -1;
+        
         for (var iy = 0; iy < height; ++iy) {
             for (var ix = 0; ix < width; ++ix) {
                 if (iy == 0 || ix == 0 || iy == height - 1 || ix == width - 1)
@@ -26,17 +82,16 @@ public class Day10 : Solver {
                 else
                     grid[iy, ix] = splitInput[iy - 1][ix - 1];
 
-                distances[iy, ix] = -1;
                 if (grid[iy, ix] == 'S') {
                     sx = ix;
                     sy = iy;
-                    distances[iy, ix] = 0;
                 }
             }
         }
-    }
-
-    public override long SolvePartOne() {
+        
+        if (sx == -1 || sy == -1)
+            throw new InvalidOperationException("Could not determine position of S");
+        
         var exitUp = grid[sy - 1, sx] == '|' || grid[sy - 1, sx] == '7' || grid[sy - 1, sx] == 'F';
         var exitDown = grid[sy + 1, sx] == '|' || grid[sy + 1, sx] == 'J' || grid[sy + 1, sx] == 'L';
         var exitRight = grid[sy, sx + 1] == '-' || grid[sy, sx + 1] == '7' || grid[sy, sx + 1] == 'J';
@@ -49,13 +104,30 @@ public class Day10 : Solver {
             (exitUp && exitLeft) ? 'J' :
             (exitDown && exitLeft) ? '7' :
             (exitDown && exitRight) ? 'F' :
-            throw new InvalidOperationException("Could not determine S");
+            throw new InvalidOperationException("Could not determine correct pipe for S");
+
+        return grid;
+    }
+
+    private static int[,] InitialiseDistances(char[,] grid, int sx, int sy, out int maxDistance) {
+        var height = grid.GetLength(0);
+        var width = grid.GetLength(1);
         
-        ShowGrid();
+        // initialise disconnected distances array
+        var distances = new int[height, width];
+        for (var y = 0; y < height; ++y) {
+            for (var x = 0; x < width; ++x) {
+                distances[y, x] = -1;
+            }
+        }
+        
+        // connect the start position
+        distances[sy, sx] = 0;
 
         int x1 = sx, x2 = sx, y1 = sy, y2 = sy, maxDistance1 = 0, maxDistance2 = 0;
         bool bored1 = false, bored2 = false;
 
+        // walk both directions until bored
         while (!bored1 || !bored2) {
             if (!bored1) {
                 maxDistance1++;
@@ -131,74 +203,27 @@ public class Day10 : Solver {
                 }
             }
         }
-        
-        ShowDistances();
 
-        return Math.Max(maxDistance1, maxDistance2);
+        maxDistance = Math.Max(maxDistance1, maxDistance2);
+        return distances;
     }
 
-    public override long SolvePartTwo() {
-        SolvePartOne();
-
-        var height = grid.GetLength(0);
-        var width = grid.GetLength(1);
-        var points = new char[height, width];
-
-        for (var y = 0; y < height; ++y) {
-            for (var x = 0; x < width; ++x) {
-                if (distances[y, x] == -1)
-                    grid[y, x] = '.';
-            }
-        }
-        
-        var accumulator = 0;
-        
-        for (var y = 0; y < height; ++y) {
-            for (var x = 0; x < width; ++x) {
-                points[y, x] = grid[y, x];
-
-                // already on the loop, ignore
-                if (distances[y, x] > -1)
-                    continue;
-                
-                // send a ray to the edge
-                var intersections = 0;
-                
-                for (var trace = x; trace >= 0; --trace) {
-                    if (grid[y, trace] == '|' || grid[y, trace] == 'L' || grid[y, trace] == 'J')
-                        intersections++;
-                }
-                
-                // odd intersections is in the curve
-                if (intersections % 2 == 1) {
-                    points[y, x] = '#';
-                    accumulator++;
-                }
-            }
-        }
-
-        ShowInterior(points); 
-        
-        return accumulator;
-    }
-
-    private void ShowGrid() {
-        //return; // debugging only
+    private void ShowGrid(char[,] grid) {
+        Trace.WriteLine();
         foreach (var y in Enumerable.Range(0, grid.GetLength(0)))
-            Output.WriteLine(new string(Enumerable.Range(0, grid.GetLength(1)).Select(x => grid[y, x]).ToArray()));
+            Trace.WriteLine(new string(Enumerable.Range(0, grid.GetLength(1)).Select(x => grid[y, x]).ToArray()));
     }
 
-    private void ShowDistances() {
-        //return; // debugging only
-        Output.WriteLine();
+    private void ShowDistances(int[,] distances) {
+        Trace.WriteLine();
         foreach (var y in Enumerable.Range(0, distances.GetLength(0)))
-            Output.WriteLine(new string(Enumerable.Range(0, distances.GetLength(1)).Select(x => distances[y, x] == -9 ? '.' : (char)('0' + distances[y, x] % 10)).ToArray()));
+            Trace.WriteLine(new string(Enumerable.Range(0, distances.GetLength(1)).Select(x => distances[y, x] == -1 ? '.' : (char)('0' + distances[y, x] % 10)).ToArray()));
     }
     
     private void ShowInterior(char[,] points) {
-        Output.WriteLine();
+        Trace.WriteLine();
         foreach (var y in Enumerable.Range(0, points.GetLength(0)))
-            Output.WriteLine(new string(Enumerable.Range(0, points.GetLength(1)).Select(x => points[y, x]).ToArray()));
+            Trace.WriteLine(new string(Enumerable.Range(0, points.GetLength(1)).Select(x => points[y, x]).ToArray()));
     }
 
     private const string? ExampleInput1 = @"
