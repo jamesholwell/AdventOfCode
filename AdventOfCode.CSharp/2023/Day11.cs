@@ -13,7 +13,10 @@ public class Day11 : Solver {
         return PairAndMeasureDistance(universe);
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        var universe = Expand(Parse(Input), 1000000);
+        return PairAndMeasureDistance(universe);
+    }
 
     private record Universe {
         public int Height;
@@ -47,7 +50,7 @@ public class Day11 : Solver {
         return universe;
     }
 
-    private static Universe Expand(Universe universe) {
+    private static Universe Expand(Universe universe, int expansion = 2) {
         var emptyX = new HashSet<int>(Enumerable.Range(0, universe.Width));
         var emptyY = new HashSet<int>(Enumerable.Range(0, universe.Height));
 
@@ -57,13 +60,13 @@ public class Day11 : Solver {
         }
 
         var expandedUniverse = new Universe() {
-            Width = universe.Width + emptyX.Count,
-            Height = universe.Height + emptyY.Count
+            Width = universe.Width + (expansion - 1) * emptyX.Count,
+            Height = universe.Height + (expansion - 1) * emptyY.Count
         };
 
         foreach (var pair in universe.Galaxies) {
-            var x = pair.Key.x + emptyX.Count(i => i < pair.Key.x);
-            var y = pair.Key.y + emptyY.Count(i => i < pair.Key.y);
+            var x = pair.Key.x + (expansion - 1) * emptyX.Count(i => i < pair.Key.x);
+            var y = pair.Key.y + (expansion - 1) * emptyY.Count(i => i < pair.Key.y);
             expandedUniverse.AddGalaxy(x, y);
         }
         
@@ -79,7 +82,7 @@ public class Day11 : Solver {
 
         var distances = pairs
             .Select(
-                pair => Math.Abs(pair.left.Key.x - pair.right.Key.x)
+                pair => (long)Math.Abs(pair.left.Key.x - pair.right.Key.x)
                         + Math.Abs(pair.left.Key.y - pair.right.Key.y));
 
         return distances.Sum();
@@ -171,5 +174,20 @@ public class Day11 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day11(ExampleInput, Output).SolvePartOne();
         Assert.Equal(374, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample1() {
+        var universe = Expand(Parse(ExampleInput!), 10);
+        Output.WriteLine(Render(universe));
+        var actual = PairAndMeasureDistance(universe);
+        Assert.Equal(1030, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample2() {
+        var universe = Expand(Parse(ExampleInput!), 100);
+        var actual = PairAndMeasureDistance(universe);
+        Assert.Equal(8410, actual);
     }
 }
