@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Text.RegularExpressions;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2023;
@@ -15,7 +16,7 @@ public class Day12 : Solver {
             var row = parts[0];
             var groups = parts[1].Split(',').Select(int.Parse).ToArray();
 
-            var combinations = Combinations(string.Empty, row, groups);
+            var combinations = Combinations(row, groups);
             Trace.WriteLine($"Found {combinations} combinations for {line}");
 
             accumulator += combinations;
@@ -26,59 +27,48 @@ public class Day12 : Solver {
 
     public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
 
-    private int Combinations(string prefix, string line, int[] groups) {
-        // if there's nothing left to guess, we can quit early
+    private readonly Regex SlotRegex = new Regex("([^\\.])+", RegexOptions.Compiled);
+    
+    private int Combinations(string row, int[] groups) {
+        // consider the no groups case
         if (groups.Length == 0) {
-            if (line.Contains('#')) return 0; // this was an invalid combination
-            Trace.WriteLine(prefix + line.Replace('?', '.'));
+            // if any broken springs are present this is an invalid combination
+            if (row.Contains('#')) return 0;
+            
+            // otherwise there's exactly one solution - all '.'
             return 1;
         }
-
-        // calculate the minimum row length based on each group with exactly one dividing space
-        var groupInherentLength = groups.Length - 1;
-        foreach (var group in groups) groupInherentLength += group;
         
-        // calculate the slack remaining (the amount of 'choice' of where to place groups)
-        var rowLength = line.Length;
-        var slack = rowLength - groupInherentLength;
-
+        // find a slot to put the group into
+        var slots = SlotRegex.Matches(row);
+        if (!slots.Any())
+            return 0;
+        
+        var groupLength = groups[0];
+        var slot = slots.FirstOrDefault(s => s.Length >= groupLength);
+        if (slot == null)
+            return 0;
+        
         var accumulator = 0;
-        
-        // consider the position of the first group:
-        //   it cannot start before the beginning
-        //   it cannot start after the point where there is exactly enough room for the rest of the groups
-        for (var candidateStart = 0; candidateStart <= slack; ++candidateStart) {
-            // we can't start if there's not an unknown
-            if (line[candidateStart] == '.') continue;
 
+        // now consider the position of the first broken spring within the slot
+        for (var candidateStart = 0; candidateStart <= slot.Length - groupLength; ++candidateStart) {
+            var startPosition = slot.Index + candidateStart;
+            
             // we can't be followed by a broken spring (groups must be divided)
-            var firstPositionAfterGroup = candidateStart + groups[0];
-            if (firstPositionAfterGroup < rowLength && line[firstPositionAfterGroup] == '#')
+            var firstPositionAfterGroup = startPosition + groupLength;
+            if (firstPositionAfterGroup < row.Length && row[firstPositionAfterGroup] == '#')
                 continue;
+
+            // otherwise, it's a valid selection, and now we recurse
+            if (firstPositionAfterGroup < row.Length)
+                accumulator += Combinations(row[(firstPositionAfterGroup + 1)..], groups[1..]);
+            else if (groups.Length == 1)
+                accumulator++;
             
-            // walk the span to check there are no known-good springs in the way
-            var isValid = true;
-            var i = candidateStart;
-            while (isValid && ++i < firstPositionAfterGroup) {
-                if (line[i] == '.')
-                    isValid = false;
-            }
-            
-            // now consider all the possible following combinations
-            if (isValid) {
-                if (firstPositionAfterGroup >= rowLength) {
-                    // we are the last position, no more work to do
-                    accumulator++;
-                    break;
-                }
-                
-                var nextPrefix = prefix + new string('.', candidateStart) + new string('#', groups[0]) + ".";
-                var nextLine = line[(firstPositionAfterGroup + 1)..];
-                accumulator += Combinations(nextPrefix, nextLine, groups[1..]);
-            }
-            
-            // we can't start any later than the first broken spring (by definition, we're the first group!)
-            if (line[candidateStart] == '#') break;
+            // the start can't be after a broken string (that wouldn't be the start)
+            if (row[startPosition] == '#')
+                break;
         }
 
         return accumulator;
@@ -94,6 +84,26 @@ public class Day12 : Solver {
 ";
 
     [Theory]
+    // no groups into example strings
+    [InlineData("", new int[0], 1)]
+    [InlineData(".", new int[0], 1)]
+    [InlineData("?", new int[0], 1)]
+    [InlineData("#", new int[0], 0)]
+    // single group into example strings
+    [InlineData("", new[] { 1 }, 0)]
+    [InlineData(".", new[] { 1 }, 0)]
+    [InlineData("?", new[] { 1 }, 1)]
+    [InlineData("#", new[] { 1 }, 1)]
+    [InlineData("#?", new[] { 1 }, 1)]
+    [InlineData("?#", new[] { 1 }, 1)]
+    [InlineData("??", new[] { 1 }, 2)]
+    [InlineData("?????", new[] { 1 }, 5)]
+    public void SolvesTrivialExamples(string line, int[] groups, int expected) {
+        var actual = Combinations(line, groups);
+        Assert.Equal(expected, actual);
+    }
+    
+    [Theory]
     [InlineData("???.###", new[] { 1, 1, 3 }, 1)]
     [InlineData(".??..??...?##.", new[] { 1, 1, 3 }, 4)]
     [InlineData("?#?#?#?#?#?#?#?", new[] { 1, 3, 1, 6 }, 1)]
@@ -101,7 +111,7 @@ public class Day12 : Solver {
     [InlineData("????.######..#####.", new[] { 1, 6, 5 }, 4)]
     [InlineData("?###????????", new[] { 3, 2, 1 }, 10)]
     public void SolvesPartOneExampleLines(string line, int[] groups, int expected) {
-        var actual = Combinations(string.Empty, line, groups);
+        var actual = Combinations(line, groups);
         Assert.Equal(expected, actual);
     }
 
