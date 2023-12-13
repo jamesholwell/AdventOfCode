@@ -25,9 +25,34 @@ public class Day12 : Solver {
         return accumulator;
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        var accumulator = 0;
+        
+        foreach (var line in Shared.Split(Input)) {
+            var parts = line.Split(' ', 2, StringSplitOptions.TrimEntries);
+            
+            var row = $"{parts[0]}?{parts[0]}?{parts[0]}?{parts[0]}?{parts[0]}";
+            var groups = $"{parts[1]},{parts[1]},{parts[1]},{parts[1]},{parts[1]}".Split(',').Select(int.Parse).ToArray();
+            
+            var combinations = MemoizedCombinations(row, groups);
+            Output.WriteLine($"Found {combinations} combinations for {line}");
+
+            accumulator += combinations;
+        }
+
+        return accumulator;
+    }
 
     private readonly Regex SlotRegex = new Regex("([^\\.])+", RegexOptions.Compiled);
+    
+    private Dictionary<(string, int[]), int> memos = new();
+    
+    private int MemoizedCombinations(string row, int[] groups) {
+        if (memos.TryGetValue((row, groups), out var combinations))
+            return combinations;
+    
+        return memos[(row, groups)] = Combinations(row, groups);
+    }
     
     private int Combinations(string row, int[] groups) {
         // consider the no groups case
@@ -56,7 +81,7 @@ public class Day12 : Solver {
                 var firstPositionAfterGroup = startPosition + groupLength;
                 if (firstPositionAfterGroup >= row.Length || row[firstPositionAfterGroup] != '#') {
                     if (firstPositionAfterGroup < row.Length)
-                        accumulator += Combinations(row[(firstPositionAfterGroup + 1)..], groups[1..]);
+                        accumulator += MemoizedCombinations(row[(firstPositionAfterGroup + 1)..], groups[1..]);
                     else if (groups.Length == 1)
                         accumulator++;
                 }
@@ -147,10 +172,15 @@ public class Day12 : Solver {
         Assert.Equal(expected, actual);
     }
 
-
     [Fact]
     public void SolvesPartOneExample() {
         var actual = new Day12(ExampleInput, Output).SolvePartOne();
         Assert.Equal(21, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day12(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(525152, actual);
     }
 }
