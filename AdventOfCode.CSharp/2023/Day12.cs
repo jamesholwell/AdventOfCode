@@ -17,7 +17,7 @@ public class Day12 : Solver {
             var groups = parts[1].Split(',').Select(int.Parse).ToArray();
 
             var combinations = Combinations(row, groups);
-            Trace.WriteLine($"Found {combinations} combinations for {line}");
+            Output.WriteLine($"Found {combinations} combinations for {line}");
 
             accumulator += combinations;
         }
@@ -40,34 +40,34 @@ public class Day12 : Solver {
         }
         
         // find a slot to put the group into
-        var slots = SlotRegex.Matches(row);
+        var slots = SlotRegex.Matches(row).ToArray();
         if (!slots.Any())
             return 0;
         
-        var groupLength = groups[0];
-        var slot = slots.FirstOrDefault(s => s.Length >= groupLength);
-        if (slot == null)
-            return 0;
-        
         var accumulator = 0;
+        var groupLength = groups[0];
 
-        // now consider the position of the first broken spring within the slot
-        for (var candidateStart = 0; candidateStart <= slot.Length - groupLength; ++candidateStart) {
-            var startPosition = slot.Index + candidateStart;
-            
-            // we can't be followed by a broken spring (groups must be divided)
-            var firstPositionAfterGroup = startPosition + groupLength;
-            if (firstPositionAfterGroup < row.Length && row[firstPositionAfterGroup] == '#')
-                continue;
+        foreach (var slot in slots.OrderBy(slot => slot.Index)) {
+            // now consider the position of the first broken spring within the slot
+            for (var candidateStart = 0; candidateStart <= slot.Length - groupLength; ++candidateStart) {
+                var startPosition = slot.Index + candidateStart;
 
-            // otherwise, it's a valid selection, and now we recurse
-            if (firstPositionAfterGroup < row.Length)
-                accumulator += Combinations(row[(firstPositionAfterGroup + 1)..], groups[1..]);
-            else if (groups.Length == 1)
-                accumulator++;
-            
-            // the start can't be after a broken string (that wouldn't be the start)
-            if (row[startPosition] == '#')
+                // we can't be followed by a broken spring (groups must be divided)
+                var firstPositionAfterGroup = startPosition + groupLength;
+                if (firstPositionAfterGroup >= row.Length || row[firstPositionAfterGroup] != '#') {
+                    if (firstPositionAfterGroup < row.Length)
+                        accumulator += Combinations(row[(firstPositionAfterGroup + 1)..], groups[1..]);
+                    else if (groups.Length == 1)
+                        accumulator++;
+                }
+                
+                // the start can't be after a broken spring (that wouldn't be the start)
+                if (row[startPosition] == '#')
+                    break;
+            }
+
+            // we can't skip slots after encountering a broken spring (that wouldn't be the start)
+            if (slot.Value.Contains('#'))
                 break;
         }
 
@@ -114,6 +114,39 @@ public class Day12 : Solver {
         var actual = Combinations(line, groups);
         Assert.Equal(expected, actual);
     }
+
+    [Theory]
+    [InlineData("?#?###???#??#?.???", new[] { 11, 1, 1 }, 3)]
+    //              "###########.#..#.."
+    //              "###########.#...#."
+    //              "###########.#....#"
+    [InlineData(".????#?#???#???????", new[] { 12, 1, 1 }, 10)]
+    //              ".############.#.#.."
+    //              ".############.#..#."
+    //              ".############.#...#"
+    //              ".############..#.#."
+    //              ".############..#..#"
+    //              ".############...#.#"
+    //              "..############.#.#."
+    //              "..############.#..#"
+    //              "..############..#.#"
+    //              "...############.#.#"
+    [InlineData("?#???##??#?????#.???", new[] { 2, 11, 1 }, 7)]
+    [InlineData("#??##???????????.", new[] { 1, 11, 1 }, 3)]
+    [InlineData(".??.?.?#?##?#???#??", new[] { 1, 11 }, 6)]
+    [InlineData("??#.?#???####??#??.?", new[] { 1, 11, 1 }, 2)]
+    public void SolvesPathologicalExample(string line, int[] groups, int expected) {
+        var actual = Combinations(line, groups);
+        Assert.Equal(expected, actual);
+    }
+    
+    [Theory]
+    [InlineData("??..#.?#??", new[] { 1, 1, 1 }, 3)]
+    public void SolvesExampleWhereGroupIsSkipped(string line, int[] groups, int expected) {
+        var actual = Combinations(line, groups);
+        Assert.Equal(expected, actual);
+    }
+
 
     [Fact]
     public void SolvesPartOneExample() {
