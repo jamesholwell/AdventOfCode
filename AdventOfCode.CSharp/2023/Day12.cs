@@ -8,7 +8,7 @@ public class Day12 : Solver {
     public Day12(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
 
     public override long SolvePartOne() {
-        var accumulator = 0;
+        var accumulator = 0L;
         
         foreach (var line in Shared.Split(Input)) {
             var parts = line.Split(' ', 2, StringSplitOptions.TrimEntries);
@@ -26,7 +26,7 @@ public class Day12 : Solver {
     }
 
     public override long SolvePartTwo() {
-        var accumulator = 0;
+        var accumulator = 0L;
         
         foreach (var line in Shared.Split(Input)) {
             var parts = line.Split(' ', 2, StringSplitOptions.TrimEntries);
@@ -45,16 +45,18 @@ public class Day12 : Solver {
 
     private readonly Regex SlotRegex = new Regex("([^\\.])+", RegexOptions.Compiled);
     
-    private Dictionary<(string, int[]), int> memos = new();
+    private Dictionary<(string, string), long> memos = new();
     
-    private int MemoizedCombinations(string row, int[] groups) {
-        if (memos.TryGetValue((row, groups), out var combinations))
+    private long MemoizedCombinations(string row, int[] groups) {
+        var groupKey = string.Join(",", groups);
+        
+        if (memos.TryGetValue((row, groupKey), out var combinations))
             return combinations;
     
-        return memos[(row, groups)] = Combinations(row, groups);
+        return memos[(row, groupKey)] = Combinations(row, groups);
     }
     
-    private int Combinations(string row, int[] groups) {
+    private long Combinations(string row, int[] groups) {
         // consider the no groups case
         if (groups.Length == 0) {
             // if any broken springs are present this is an invalid combination
@@ -69,7 +71,7 @@ public class Day12 : Solver {
         if (!slots.Any())
             return 0;
         
-        var accumulator = 0;
+        var accumulator = 0L;
         var groupLength = groups[0];
 
         foreach (var slot in slots.OrderBy(slot => slot.Index)) {
