@@ -15,6 +15,11 @@ public class NullOutputHelper : ITestOutputHelper {
 }
 
 public static class OutputHelperExtensions {
+    public static void WriteHeading(this ITestOutputHelper outputHelper, string heading) {
+        outputHelper.WriteLine(string.Empty);
+        outputHelper.WriteLine(heading);
+    }
+
     public static void WriteLine(this ITestOutputHelper outputHelper) => outputHelper.WriteLine(string.Empty);
 
     public static void WriteLine(this ITestOutputHelper outputHelper, int value) =>
