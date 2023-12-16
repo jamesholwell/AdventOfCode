@@ -46,7 +46,7 @@ public class Day16 : Solver {
 
     private void CalculateLightPath() {
         // initialise particles
-        var photons = new List<(int x, int y, Direction d)> { (-1, 0, Direction.Right) };
+        var photons = new List<(int x, int y, Direction d)> { (0, 0, Direction.Right) };
         var nextPhotons = new List<(int x, int y, Direction)>();
         var energizedNewTile = true;
         
@@ -55,118 +55,65 @@ public class Day16 : Solver {
             energizedNewTile = false;
             
             foreach (var photon in photons) {
-                if (photon.x == -1) {
-                    // initial photon starts "off the map" - skip this step
+                // ignore any photon that has travelled off map
+                if (photon.y < 0 || photon.y >= height || photon.x < 0 || photon.x >= width)
+                    continue;
+                
+                // energize the tile
+                energised[photon.y, photon.x] = true;
+
+                // update maps (and see if we've passed through this tile in this direction before)
+                if (!map[photon.y, photon.x].HasFlag(photon.d)) {
+                    map[photon.y, photon.x] |= photon.d;
                     energizedNewTile = true;
-                } 
-                else {
-                    // energize the tile
-                    energised[photon.y, photon.x] = true;
-
-                    // update maps (and see if we've passed through this tile in this direction before)
-                    if (!map[photon.y, photon.x].HasFlag(photon.d)) {
-                        map[photon.y, photon.x] |= photon.d;
-                        energizedNewTile = true;
-                    }
-
-                    // fall off the edge of the map
-                    if (photon.d == Direction.Up && photon.y == 0
-                        || photon.d == Direction.Right && photon.x == width - 1
-                        || photon.d == Direction.Down && photon.y == height - 1
-                        || photon.d == Direction.Left && photon.x == 0)
-                        continue;
                 }
 
                 // consider up
                 if (photon.d == Direction.Up) {
-                    var nextPhoton = photon with { y = photon.y - 1 };
-                    switch (grid[nextPhoton.y, nextPhoton.x]) {
-                        case '.' or '|':
-                            nextPhotons.Add(nextPhoton);
-                            break;
+                    if (grid[photon.y, photon.x] is '.' or '|')
+                        nextPhotons.Add(photon with { y = photon.y - 1 });
+                    
+                    if (grid[photon.y, photon.x] is '/' or '-')
+                        nextPhotons.Add(photon with { x = photon.x + 1, d = Direction.Right });
                         
-                        case '/':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Right });
-                            break;
-                        
-                        case '\\':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Left });
-                            break;
-                        
-                        case '-':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Left });
-                            nextPhotons.Add(nextPhoton with { d = Direction.Right });
-                            break;
-                    }
+                    if (grid[photon.y, photon.x] is '\\' or '-') 
+                        nextPhotons.Add(photon with { x = photon.x - 1, d = Direction.Left });
                 }
                 
                 // consider right
                 if (photon.d == Direction.Right) {
-                    var nextPhoton = photon with { x = photon.x + 1 };
-                    switch (grid[nextPhoton.y, nextPhoton.x]) {
-                        case '.' or '-':
-                            nextPhotons.Add(nextPhoton);
-                            break;
+                    if (grid[photon.y, photon.x] is '.' or '-')
+                        nextPhotons.Add(photon with { x = photon.x + 1 });
+                    
+                    if (grid[photon.y, photon.x] is '/' or '|')
+                        nextPhotons.Add(photon with { y = photon.y - 1, d = Direction.Up });
                         
-                        case '/':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Up });
-                            break;
-                        
-                        case '\\':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Down });
-                            break;
-                        
-                        case '|':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Up });
-                            nextPhotons.Add(nextPhoton with { d = Direction.Down });
-                            break;
-                    }
+                    if (grid[photon.y, photon.x] is '\\' or '|') 
+                        nextPhotons.Add(photon with { y = photon.y + 1, d = Direction.Down });
                 }
                 
                 // consider down
                 if (photon.d == Direction.Down) {
-                    var nextPhoton = photon with { y = photon.y + 1 };
-                    switch (grid[nextPhoton.y, nextPhoton.x]) {
-                        case '.' or '|':
-                            nextPhotons.Add(nextPhoton);
-                            break;
+                    if (grid[photon.y, photon.x] is '.' or '|')
+                        nextPhotons.Add(photon with { y = photon.y + 1 });
+                    
+                    if (grid[photon.y, photon.x] is '/' or '-')
+                        nextPhotons.Add(photon with { x = photon.x - 1, d = Direction.Left });
                         
-                        case '/':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Left });
-                            break;
-                        
-                        case '\\':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Right });
-                            break;
-                        
-                        case '-':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Left });
-                            nextPhotons.Add(nextPhoton with { d = Direction.Right });
-                            break;
-                    }
+                    if (grid[photon.y, photon.x] is '\\' or '-') 
+                        nextPhotons.Add(photon with { x = photon.x + 1, d = Direction.Right });
                 }
                 
                 // consider left
                 if (photon.d == Direction.Left) {
-                    var nextPhoton = photon with { x = photon.x - 1 };
-                    switch (grid[nextPhoton.y, nextPhoton.x]) {
-                        case '.' or '-':
-                            nextPhotons.Add(nextPhoton);
-                            break;
+                    if (grid[photon.y, photon.x] is '.' or '-')
+                        nextPhotons.Add(photon with { x = photon.x - 1 });
+                    
+                    if (grid[photon.y, photon.x] is '/' or '|')
+                        nextPhotons.Add(photon with { y = photon.y + 1, d = Direction.Down });
                         
-                        case '/':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Down });
-                            break;
-                        
-                        case '\\':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Up });
-                            break;
-                        
-                        case '|':
-                            nextPhotons.Add(nextPhoton with { d = Direction.Up });
-                            nextPhotons.Add(nextPhoton with { d = Direction.Down });
-                            break;
-                    }
+                    if (grid[photon.y, photon.x] is '\\' or '|') 
+                        nextPhotons.Add(photon with { y = photon.y - 1, d = Direction.Up });
                 }
             }
             
