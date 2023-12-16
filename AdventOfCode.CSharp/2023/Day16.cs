@@ -19,7 +19,7 @@ public class Day16 : Solver {
         Trace.WriteHeading("Contraption layout:");
         Trace.WriteLine(grid.Render());
         
-        CalculateLightPath();
+        CalculateLightPath((0, 0, Direction.Right));
 
         // render beam of light grid
         Trace.WriteHeading("Light path:");
@@ -33,7 +33,31 @@ public class Day16 : Solver {
         return energised.Count();
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        Initialize(Input);
+
+        var downPhotons = Enumerable.Range(0, width).Select(x => (x, 0, Direction.Down));
+        var upPhotons = Enumerable.Range(0, width).Select(x => (x, height - 1, Direction.Up));
+        var rightPhotons = Enumerable.Range(0, height).Select(y => (0, y, Direction.Right));
+        var leftPhotons = Enumerable.Range(0, height).Select(y => (width - 1, y, Direction.Left));
+        var initialPhotons =
+            downPhotons.Concat(upPhotons).Concat(rightPhotons).Concat(leftPhotons);
+
+        var results = new List<long>();
+        foreach (var initialPhoton in initialPhotons) {
+            CalculateLightPath(initialPhoton);
+            var count = energised.Count();
+            results.Add(count);
+            
+            Trace.WriteLine($"Light path from {initialPhoton.Item1}, {initialPhoton.Item2} energizes {count} tiles");
+            
+            // reset grids
+            Array.Clear(energised);
+            Array.Clear(map);
+        }
+
+        return results.Max();
+    }
 
     private void Initialize(string input) {
         // initialise grids
@@ -44,9 +68,9 @@ public class Day16 : Solver {
         energised = new bool[height, width];
     }
 
-    private void CalculateLightPath() {
+    private void CalculateLightPath((int x, int y, Direction d) initialPhoton) {
         // initialise particles
-        var photons = new List<(int x, int y, Direction d)> { (0, 0, Direction.Right) };
+        var photons = new List<(int x, int y, Direction d)> { initialPhoton };
         var nextPhotons = new List<(int x, int y, Direction)>();
         var energizedNewTile = true;
         
@@ -195,7 +219,7 @@ public class Day16 : Solver {
     [Fact]
     public void RendersLightPathCorrectly() {
         Initialize(ExampleInput!);
-        CalculateLightPath();
+        CalculateLightPath((0, 0, Direction.Right));
         var actual = Environment.NewLine + map.Render(MapRenderer) + Environment.NewLine;
         Assert.Equal(ExampleLightPath, actual);
     }
@@ -203,7 +227,7 @@ public class Day16 : Solver {
     [Fact]
     public void RendersEnergizedTilesCorrectly() {
         Initialize(ExampleInput!);
-        CalculateLightPath();
+        CalculateLightPath((0, 0, Direction.Right));
         var actual = Environment.NewLine + energised.Render(EnergizedRenderer) + Environment.NewLine;
         Assert.Equal(ExampleEnergizedTiles, actual);
     }
@@ -212,5 +236,11 @@ public class Day16 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day16(ExampleInput, Output).SolvePartOne();
         Assert.Equal(46, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day16(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(51, actual);
     }
 }
