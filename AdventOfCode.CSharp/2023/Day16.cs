@@ -71,6 +71,7 @@ public class Day16 : Solver {
     private void CalculateLightPath((int x, int y, Direction d) initialPhoton) {
         // initialise particles
         var photons = new List<(int x, int y, Direction d)> { initialPhoton };
+        var seenPhotons = new HashSet<(int x, int y, Direction d)>();
         var nextPhotons = new List<(int x, int y, Direction)>();
         var energizedNewTile = true;
         
@@ -83,6 +84,10 @@ public class Day16 : Solver {
                 if (photon.y < 0 || photon.y >= height || photon.x < 0 || photon.x >= width)
                     continue;
                 
+                // ignore any photon that we've already seen
+                if (!seenPhotons.Add(photon)) 
+                    continue;
+
                 // energize the tile
                 energised[photon.y, photon.x] = true;
 
