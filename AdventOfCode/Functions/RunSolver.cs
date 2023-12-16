@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Diagnostics;
+using System.Reflection;
 using AdventOfCode.Core;
 
 namespace AdventOfCode.Functions;
@@ -8,10 +9,12 @@ internal class RunSolver {
     private readonly IConsole console;
 
     private readonly SolverFactory factory;
+    private readonly bool isTracing;
 
-    public RunSolver(IConsole console, SolverFactory factory) {
+    public RunSolver(IConsole console, SolverFactory factory, bool isTracing = false) {
         this.console = console;
         this.factory = factory;
+        this.isTracing = isTracing;
     }
 
     public void Execute(PuzzleSpecification puzzle) {
@@ -55,6 +58,19 @@ internal class RunSolver {
 
         Console.ForegroundColor = ConsoleColor.DarkGray;
         console.WriteLine($"# Using solver {solver.GetType().FullName}");
+        if (isTracing) {
+            var baseBaseType = solver.GetType().BaseType?.BaseType;
+            var outputProperty = baseBaseType?.GetField("<Output>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance);
+            var traceProperty = baseBaseType?.GetField("<Trace>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (outputProperty == null || traceProperty == null) {
+                console.WriteLine($"# Tracing not available");
+            }
+            else {
+                console.WriteLine($"# Enabling tracing");
+                traceProperty.SetValue(solver, outputProperty.GetValue(solver));
+            }
+        }
         Console.ResetColor();
 
         var sw = new Stopwatch();
