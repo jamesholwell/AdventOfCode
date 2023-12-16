@@ -42,6 +42,10 @@ var puzzleArgument =
             return spec;
         }) { Arity = ArgumentArity.ZeroOrMore };
 
+var traceArgument = new Option<bool>(
+    "--trace",
+    "Output trace information");
+
 var listArgument = new Option<bool>(
     "--list",
     "Show all available solvers");
@@ -50,7 +54,7 @@ var benchmarkArgument = new Option<bool>(
     "--bench",
     "Benchmark solver performance");
 
-var root = new RootCommand { puzzleArgument, listArgument, benchmarkArgument };
+var root = new RootCommand { puzzleArgument, traceArgument, listArgument, benchmarkArgument };
 
 root.SetHandler(context => {
     var puzzle = context.ParseResult.GetValueForArgument(puzzleArgument);
@@ -68,12 +72,13 @@ root.SetHandler(context => {
         new ListSolvers(context.Console, factory).Execute();
         return;
     }
-
+    
+    var isTracing = context.ParseResult.GetValueForOption(traceArgument);
     var isBenchmarking = context.ParseResult.GetValueForOption(benchmarkArgument);
     if (isBenchmarking)
         new BenchmarkSolvers(context.Console, factory).Execute(puzzle);
     else
-        new RunSolver(context.Console, factory).Execute(puzzle);
+        new RunSolver(context.Console, factory, isTracing).Execute(puzzle);
 });
 
 await root.InvokeAsync(args);
