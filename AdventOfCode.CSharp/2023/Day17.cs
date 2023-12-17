@@ -4,28 +4,22 @@ using Xunit.Abstractions;
 namespace AdventOfCode.CSharp._2023;
 
 public class Day17 : Solver {
+    private int[,] grid = null!;
+    private int width;
+    private int height;
+    
     public Day17(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
     
     public override long SolvePartOne() {
         // initialize the grid
-        var grid = Input.SplitGrid(c => c - '0');
-        var width = grid.Width();
-        var height = grid.Height();
+        InitializeGrid();
 
         // run A* over the grid
         (int x, int y, Heading h, int l) startNode = (0, 0, Heading.None, 0);
         var (minCost, path) = Algorithms.AStar(startNode, Connections, Heuristic, IsGoal);
 
-        // draw the path map
-        var pathMap = grid.Map((x, y, _) => {
-            var foundPath = path.SingleOrDefault(p => p.x == x && p.y == y);
-            return foundPath.h == Heading.Up ? '^'
-                : foundPath.h == Heading.Right ? '>'
-                : foundPath.h == Heading.Down ? 'v'
-                : foundPath.h == Heading.Left ? '<' : (char)('0' + grid[y, x]);
-        });
-        Trace.WriteLine(pathMap.Render());
-        
+        DrawPath(path);
+
         // return the result
         return minCost;
         
@@ -52,9 +46,106 @@ public class Day17 : Solver {
         bool IsGoal((int x, int y, Heading h, int l) node) => node.x == width - 1 && node.y == height - 1;
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        // initialize the grid
+        InitializeGrid();
 
-    private const string? ExampleInput = @"
+        // run A* over the grid
+        (int x, int y, Heading h, int l) startNode = (0, 0, Heading.None, 0);
+        var (minCost, path) = Algorithms.AStar(startNode, Connections, Heuristic, IsGoal);
+
+        DrawPath(path);
+
+        // return the result
+        return minCost;
+        
+        IEnumerable<((int x, int y, Heading h, int l), int c)> Connections((int x, int y, Heading h, int l) node) {
+            // up
+            if (node.h != Heading.Down)
+                if (node.h != Heading.Up && node.y > 3)
+                    yield return (node with { y = node.y - 4, h = Heading.Up, l = 4 }, grid[node.y - 1, node.x] + grid[node.y - 2, node.x] + grid[node.y - 3, node.x] + grid[node.y - 4, node.x]);
+                else if (node is { h: Heading.Up, l: < 10, y: > 0 })
+                    yield return (node with { y = node.y - 1, h = Heading.Up, l = node.l + 1 }, grid[node.y - 1, node.x]);
+
+            // right
+            if (node.h != Heading.Left)
+                if (node.h != Heading.Right && node.x < width - 4)
+                    yield return (node with { x = node.x + 4, h = Heading.Right, l = 4 }, grid[node.y, node.x + 1] + grid[node.y, node.x + 2] + grid[node.y, node.x + 3] + grid[node.y, node.x + 4]);
+                else if (node is { h: Heading.Right, l: < 10 } && node.x < width - 1)
+                    yield return (node with { x = node.x + 1, h = Heading.Right, l = node.l + 1 }, grid[node.y, node.x + 1]);
+            
+            // down
+            if (node.h != Heading.Up)
+                if (node.h != Heading.Down && node.y < height - 4)
+                    yield return (node with { y = node.y + 4, h = Heading.Down, l = 4 }, grid[node.y + 1, node.x] + grid[node.y + 2, node.x] + grid[node.y + 3, node.x] + grid[node.y + 4, node.x]);
+                else if (node is { h: Heading.Down, l: < 10 } && node.y < height - 1)
+                    yield return (node with { y = node.y + 1, h = Heading.Down, l = node.l + 1 }, grid[node.y + 1, node.x]);
+            
+            // left
+            if (node.h != Heading.Right)
+                if (node.h != Heading.Left && node.x > 3)
+                    yield return (node with { x = node.x - 4, h = Heading.Left, l = 4 }, grid[node.y, node.x - 1] + grid[node.y, node.x - 2] + grid[node.y, node.x - 3] + grid[node.y, node.x - 4]);
+                else if (node is { h: Heading.Left, l: < 10, x: > 0 })
+                    yield return (node with { x = node.x - 1, h = Heading.Left, l = node.l + 1 }, grid[node.y, node.x - 1]);
+        }
+
+        int Heuristic((int x, int y, Heading h, int l) p) => width - 1 - p.x + height - 1 - p.y;
+        
+        bool IsGoal((int x, int y, Heading h, int l) node) => node.x == width - 1 && node.y == height - 1;
+    }
+
+    private void DrawPath((int x, int y, Heading h, int l)[] path) {
+        var pathMap = grid.Map((x, y, _) => (char)('0' + grid[y, x]));
+
+        var lastHeading = Heading.None;
+        foreach (var step in path) {
+            if (step.h == Heading.None) continue;
+            
+            var symbol = step.h switch {
+                Heading.Up => '^',
+                Heading.Right => '>',
+                Heading.Down => 'v',
+                Heading.Left => '<',
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            pathMap[step.y, step.x] = symbol;
+
+            if (lastHeading != step.h) {
+                lastHeading = step.h;
+
+                if (step.l == 4) {
+                    // it's the first step of part two
+                    var dx = step.h switch {
+                        Heading.Right => -1,
+                        Heading.Left => 1,
+                        _ => 0
+                    };
+
+                    var dy = step.h switch {
+                        Heading.Up => 1,
+                        Heading.Down => -1,
+                        _ => 0
+                    };
+
+                    for (var i = 1; i < 4; i++) {
+                        pathMap[step.y + i * dy, step.x + i * dx] = symbol;
+                    } 
+                } 
+            }
+        }
+        
+        Trace.WriteLine(pathMap.Render());
+    }
+
+    private void InitializeGrid() {
+
+        grid = Input.SplitGrid(c => c - '0');
+        width = grid.Width();
+        height = grid.Height();
+    }
+
+    private const string? ExampleInput1 = @"
 2413432311323
 3215453535623
 3255245654254
@@ -69,13 +160,34 @@ public class Day17 : Solver {
 2546548887735
 4322674655533
 ";
+    
+    private const string? ExampleInput2 = @"
+111111111111
+999999999991
+999999999991
+999999999991
+999999999991
+";
 
     [Fact]
     public void SolvesPartOneExample() {
-        var actual = new Day17(ExampleInput, Output).SolvePartOne();
+        var actual = new Day17(ExampleInput1, Output).SolvePartOne();
         Assert.Equal(102, actual);
     }
     
+    [Fact]
+    public void SolvesPartTwoExample1() {
+        var actual = new Day17(ExampleInput1, Output).SolvePartTwo();
+        Assert.Equal(94, actual);
+    }
+    
+    
+    [Fact]
+    public void SolvesPartTwoExample2() {
+        var actual = new Day17(ExampleInput2, Output).SolvePartTwo();
+        Assert.Equal(71, actual);
+    }
+
     private enum Heading {
         None = 0,
         Up = 1,
