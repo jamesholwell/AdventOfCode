@@ -8,8 +8,8 @@ public static class ArrayUtilities {
     public static int Width<T>(this T[,] array) => array.GetLength(1);
 
     public static string Render(this char[,] array) {
-        var width = array.GetLength(0);
-        var height = array.GetLength(1);
+        var width = array.Width();
+        var height = array.Height();
         var buffer = new StringBuilder((width + 2) * height + 2);
 
         for (var y = 0; y < height; ++y) {
@@ -27,8 +27,8 @@ public static class ArrayUtilities {
     }
 
     public static string Render<T>(this T[,] array, Func<int, int, T, char> selector) {
-        var width = array.GetLength(0);
-        var height = array.GetLength(1);
+        var width = array.Width();
+        var height = array.Height();
         var buffer = new StringBuilder((width + 2) * height + 2);
 
         for (var y = 0; y < height; ++y) {
@@ -46,8 +46,8 @@ public static class ArrayUtilities {
     }
 
     public static TResult[] Map<T, TResult>(this T[,] array, Func<int, int, T, TResult> selector) {
-        var width = array.GetLength(0);
-        var height = array.GetLength(1);
+        var width = array.Width();
+        var height = array.Height();
         var accumulator = new TResult[width * height];
 
         for (var y = 0; y < height; ++y)
