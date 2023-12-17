@@ -21,4 +21,17 @@ public static class Shared {
 
         return grid;
     }
+    
+    public static T[,] SplitGrid<T>(this string s, Func<char, T> selector) {
+        var rows = Split(s);
+        var height = rows.Length;
+        var width = rows[0].Length;
+        var grid = new T[height, width];
+
+        for (var y = 0; y < height; ++y)
+        for (var x = 0; x < width; ++x)
+            grid[y, x] = selector(rows[y][x]);
+
+        return grid;
+    }
 }
