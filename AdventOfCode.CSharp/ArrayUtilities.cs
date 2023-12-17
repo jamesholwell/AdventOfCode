@@ -41,11 +41,27 @@ public static class ArrayUtilities {
         return buffer.ToString();
     }
 
-    public static TResult[] Map<T, TResult>(this T[,] array, Func<T, TResult> selector) {
+    public static TResult[,] Map<T, TResult>(this T[,] array, Func<T, TResult> selector) {
         return Map(array, (_, _, t) => selector(t));
     }
 
-    public static TResult[] Map<T, TResult>(this T[,] array, Func<int, int, T, TResult> selector) {
+    public static TResult[,] Map<T, TResult>(this T[,] array, Func<int, int, T, TResult> selector) {
+        var width = array.Width();
+        var height = array.Height();
+        var result = new TResult[height, width];
+
+        for (var y = 0; y < height; ++y)
+        for (var x = 0; x < width; ++x)
+            result[y, x] = selector(x, y, array[y, x]);
+
+        return result;
+    }
+    
+    public static TResult[] Flatten<T, TResult>(this T[,] array, Func<T, TResult> selector) {
+        return Flatten(array, (_, _, t) => selector(t));
+    }
+
+    public static TResult[] Flatten<T, TResult>(this T[,] array, Func<int, int, T, TResult> selector) {
         var width = array.Width();
         var height = array.Height();
         var accumulator = new TResult[width * height];
@@ -58,22 +74,22 @@ public static class ArrayUtilities {
     }
 
     public static long Sum<T>(this T[,] array, Func<T, long> selector) {
-        return Map(array, selector).Sum();
+        return Flatten(array, selector).Sum();
     }
 
     public static long Sum<T>(this T[,] array, Func<int, int, T, long> selector) {
-        return Map(array, selector).Sum();
+        return Flatten(array, selector).Sum();
     }
 
     public static long Count(this bool[,] array) {
-        return Map(array, (_, _, b) => b ? 1 : 0).Sum();
+        return Flatten(array, (_, _, b) => b ? 1 : 0).Sum();
     }
 
     public static long Count<T>(this T[,] array, Func<T, bool> predicate) {
-        return Map(array, predicate).Count(b => b);
+        return Flatten(array, predicate).Count(b => b);
     }
 
     public static long Count<T>(this T[,] array, Func<int, int, T, bool> predicate) {
-        return Map(array, predicate).Count(b => b);
+        return Flatten(array, predicate).Count(b => b);
     }
 }
