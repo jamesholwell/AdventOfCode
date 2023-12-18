@@ -9,7 +9,7 @@ public class Day18 : Solver {
     public override long SolvePartOne() {
         var instructions = Shared.Split(Input).Select(PartOneParser);
 
-        var points = ExecuteInstructions(instructions);
+        var points = ExecuteInstructions(instructions, true);
 
         var minX = points.Min(p => p.x);
         var maxX = points.Max(p => p.x);
@@ -67,9 +67,10 @@ public class Day18 : Solver {
     }
 
     public override long SolvePartTwo() {
-        var instructions = (IEnumerable<(Heading heading, int distance)>) Shared.Split(Input).Select(PartTwoParser);
+        var instructions = Shared.Split(Input).Select(PartTwoParser);
+        var points = ExecuteInstructions(instructions);
 
-        return 0;
+        return points.Count;
     }
 
     private (Heading heading, int distance) PartOneParser(string line) {
@@ -103,9 +104,12 @@ public class Day18 : Solver {
         return (heading, distance);
     }
 
-    private static List<(int x, int y)> ExecuteInstructions(IEnumerable<(Heading heading, int distance)> instructions) {
+    private static List<(int x, int y)> ExecuteInstructions(IEnumerable<(Heading heading, int distance)> instructions, bool walkEachPoint = false) {
         var points = new List<(int x, int y)>();
         int x = 0, y = 0;
+        
+        if (!walkEachPoint)
+            points.Add((x, y));
         
         foreach (var instruction in instructions) {
             var dx = instruction.heading switch {
@@ -119,11 +123,18 @@ public class Day18 : Solver {
                 Heading.Down => 1,
                 _ => 0
             };
-            
-            for (var i = 0; i < instruction.distance; ++i) {
+
+            if (walkEachPoint) {
+                for (var i = 0; i < instruction.distance; ++i) {
+                    points.Add((x, y));
+                    x += dx;
+                    y += dy;
+                }
+            }
+            else {
+                x += dx * instruction.distance;
+                y += dy * instruction.distance;
                 points.Add((x, y));
-                x += dx;
-                y += dy;
             }
         }
 
