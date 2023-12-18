@@ -7,7 +7,7 @@ public class Day18 : Solver {
     public Day18(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
 
     public override long SolvePartOne() {
-        var instructions = Parse(Input);
+        var instructions = Shared.Split(Input).Select(PartOneParser);
 
         var points = ExecuteInstructions(instructions);
 
@@ -66,13 +66,13 @@ public class Day18 : Solver {
         return grid.Count(c => c == '#');
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        var instructions = (IEnumerable<(Heading heading, int distance)>) Shared.Split(Input).Select(PartTwoParser);
 
-    private IEnumerable<(Heading heading, int distance, string c)> Parse(string input) {
-        return Shared.Split(input).Select(ParseLine);
+        return 0;
     }
 
-    private (Heading h, int d, string c) ParseLine(string line) {
+    private (Heading heading, int distance) PartOneParser(string line) {
         var parts = line.Split(' ', 3);
         
         var heading = parts[0] switch {
@@ -83,11 +83,28 @@ public class Day18 : Solver {
             _ => throw new InvalidOperationException()
         };
 
-        return (heading, int.Parse(parts[1]), parts[2][1..(parts[2].Length - 1)]);
+        return (heading, int.Parse(parts[1]));
+    }
+    
+    private (Heading heading, int distance) PartTwoParser(string line) {
+        var parts = line.Split(' ', 3);
+        var hexPart = parts[2];
+
+        var heading = hexPart[7] switch {
+            '3' => Heading.Up,
+            '0' => Heading.Right,
+            '1' => Heading.Down,
+            '2' => Heading.Left,
+            _ => throw new InvalidOperationException()
+        };
+        
+        var distance = Convert.ToInt32(hexPart.Substring(2, 5), 16);
+
+        return (heading, distance);
     }
 
-    private static List<(int x, int y, string c)> ExecuteInstructions(IEnumerable<(Heading heading, int distance, string c)> instructions) {
-        var points = new List<(int x, int y, string c)>();
+    private static List<(int x, int y)> ExecuteInstructions(IEnumerable<(Heading heading, int distance)> instructions) {
+        var points = new List<(int x, int y)>();
         int x = 0, y = 0;
         
         foreach (var instruction in instructions) {
@@ -104,7 +121,7 @@ public class Day18 : Solver {
             };
             
             for (var i = 0; i < instruction.distance; ++i) {
-                points.Add((x, y, instruction.c));
+                points.Add((x, y));
                 x += dx;
                 y += dy;
             }
@@ -136,10 +153,44 @@ U 3 (#a77fa3)
 L 2 (#015232)
 U 2 (#7a21e3)
 ";
+    
+    [Fact]
+    public void ParsesPartOneExample() {
+        var actual = Shared.Split(ExampleInput!).Select(PartOneParser).ToArray();
 
+        Assert.Equal(Heading.Right, actual[0].heading);
+        Assert.Equal(6, actual[0].distance);
+        
+        Assert.Equal(Heading.Down, actual[1].heading);
+        Assert.Equal(5, actual[1].distance);
+        
+        Assert.Equal(Heading.Left, actual[2].heading);
+        Assert.Equal(2, actual[2].distance);
+    }
+    
     [Fact]
     public void SolvesPartOneExample() {
         var actual = new Day18(ExampleInput, Output).SolvePartOne();
         Assert.Equal(62, actual);
+    }
+    
+    [Fact]
+    public void ParsesPartTwoExample() {
+        var actual = Shared.Split(ExampleInput!).Select(PartTwoParser).ToArray();
+
+        Assert.Equal(Heading.Right, actual[0].heading);
+        Assert.Equal(461937, actual[0].distance);
+        
+        Assert.Equal(Heading.Down, actual[1].heading);
+        Assert.Equal(56407, actual[1].distance);
+        
+        Assert.Equal(Heading.Right, actual[2].heading);
+        Assert.Equal(356671, actual[2].distance);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day18(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(952408144115, actual);
     }
 }
