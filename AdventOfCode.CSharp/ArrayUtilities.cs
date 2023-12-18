@@ -7,6 +7,15 @@ public static class ArrayUtilities {
 
     public static int Width<T>(this T[,] array) => array.GetLength(1);
 
+    public static void Initialize<T>(this T[,] array, T value) {
+        var width = array.Width();
+        var height = array.Height();
+
+        for (var y = 0; y < height; ++y)
+        for (var x = 0; x < width; ++x)
+            array[y, x] = value;
+    }
+    
     public static string Render(this char[,] array) {
         var width = array.Width();
         var height = array.Height();
