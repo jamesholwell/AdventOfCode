@@ -1,9 +1,12 @@
-﻿using Xunit;
+﻿using System.Diagnostics;
+using System.Text;
+
+using Xunit;
 using Xunit.Abstractions;
-// ReSharper disable InconsistentNaming - puzzle uses little x, m, a, s variable names
 
 namespace AdventOfCode.CSharp._2023;
 
+// ReSharper disable InconsistentNaming - puzzle uses little x, m, a, s variable names
 public class Day19 : Solver {
     public Day19(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
 
@@ -33,11 +36,59 @@ public class Day19 : Solver {
         public int st;
         
         // destinations
-        public string xd;
-        public string md;
-        public string ad;
-        public string sd;
-        public string dd;
+        public string xd = string.Empty;
+        public string md = string.Empty;
+        public string ad = string.Empty;
+        public string sd = string.Empty;
+        public string dd = string.Empty;
+
+        public override string ToString() {
+            var sb = new StringBuilder();
+            sb.Append("{");
+
+            for (var i = 1; i < 5; ++i) {
+                // get operator (if exists)
+                var o =
+                      (xp == i) ? xo
+                    : (mp == i) ? mo
+                    : (ap == i) ? ao
+                    : (sp == i) ? so
+                    : Operator.None;
+
+                if (o == Operator.None)
+                    break;
+                
+                // get variable
+                var v =
+                      (xp == i) ? "x"
+                    : (mp == i) ? "m"
+                    : (ap == i) ? "a"
+                    : (sp == i) ? "s"
+                    : throw new InvalidOperationException();
+                
+                // get threshold 
+                var t =
+                      (xp == i) ? xt
+                    : (mp == i) ? mt
+                    : (ap == i) ? at
+                    : (sp == i) ? st
+                    : throw new InvalidOperationException();
+
+                // rule matches, move
+                var d =
+                      (xp == i) ? xd
+                    : (mp == i) ? md
+                    : (ap == i) ? ad
+                    : (sp == i) ? sd
+                    : throw new InvalidOperationException();
+
+                sb.Append($"{v}{(o == Operator.GreaterThan ? ">" : "<")}{t}:{d},");
+            }
+
+            sb.Append(dd);
+            sb.Append("}");
+            return sb.ToString();
+        }
     }
     
     private record Part {
@@ -45,6 +96,10 @@ public class Day19 : Solver {
         public int m;
         public int a;
         public int s;
+
+        public override string ToString() {
+            return $"x={x},m={m},a={a},s={s}";
+        }
     }
     
     public override long SolvePartOne() {
@@ -100,13 +155,15 @@ public class Day19 : Solver {
             }
             
             workflows.Add(k, w);
+            Trace.WriteLine(workflowInput);
+            Trace.WriteLine($"-> {k}{w}");
+            Debug.Assert(workflowInput == k + w);
         }
         
         var parts = new List<Part>(partsSection.Length);
         foreach (var partInput in partsSection) {
             var partParts = partInput[1..^1].Split(',');
-            parts.Add(new Part
-            {
+            parts.Add(new Part {
                 x = int.Parse(partParts[0][2..]),
                 m = int.Parse(partParts[1][2..]),
                 a = int.Parse(partParts[2][2..]),
@@ -117,10 +174,65 @@ public class Day19 : Solver {
         var accept = new List<Part>();
 
         foreach (var part in parts) {
+            var queue = new Queue<string>();
+            var currentLocation = "in";
+
+            while (currentLocation != "A" && currentLocation != "R") {
+                queue.Enqueue(currentLocation);
+                
+                var workflow = workflows[currentLocation];
+                currentLocation = workflow.dd;
+
+                for (var i = 1; i < 5; ++i) {
+                    // get operator (if exists)
+                    var o = 
+                          (workflow.xp == i) ? workflow.xo
+                        : (workflow.mp == i) ? workflow.mo
+                        : (workflow.ap == i) ? workflow.ao
+                        : (workflow.sp == i) ? workflow.so
+                        : Operator.None;
+
+                    if (o == Operator.None) 
+                        break;
+                    
+                    // get threshold and value
+                    var t = 
+                          (workflow.xp == i) ? workflow.xt
+                        : (workflow.mp == i) ? workflow.mt
+                        : (workflow.ap == i) ? workflow.at
+                        : (workflow.sp == i) ? workflow.st
+                        : throw new InvalidOperationException();
+                    
+                    var v = 
+                          (workflow.xp == i) ? part.x
+                        : (workflow.mp == i) ? part.m
+                        : (workflow.ap == i) ? part.a
+                        : (workflow.sp == i) ? part.s
+                        : throw new InvalidOperationException();
+
+                    // test rule
+                    if (o == Operator.GreaterThan && v <= t || o == Operator.LessThan & v >= t)
+                        continue;
+                    
+                    // rule matches, move
+                    currentLocation = 
+                          (workflow.xp == i) ? workflow.xd
+                        : (workflow.mp == i) ? workflow.md
+                        : (workflow.ap == i) ? workflow.ad
+                        : (workflow.sp == i) ? workflow.sd
+                        : throw new InvalidOperationException();
+                }
+            }
             
+            queue.Enqueue(currentLocation);
+
+            if (currentLocation == "A")
+                accept.Add(part);
+            
+            Trace.WriteLine($"{part}: {string.Join(" -> ", queue)}");
         }
-        
-        return parts.Count;
+
+        return accept.Sum(p => p.x + p.m + p.a + p.s);
     }
 
     public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
