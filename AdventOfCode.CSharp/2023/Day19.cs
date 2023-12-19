@@ -10,114 +10,8 @@ namespace AdventOfCode.CSharp._2023;
 public class Day19 : Solver {
     public Day19(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
 
-    private enum Operator {
-        None,
-
-        LessThan,
-
-        GreaterThan
-    }
-
-    private enum Variable {
-        x,
-
-        m,
-
-        a,
-
-        s
-    }
-
-    private record Rule {
-        public Variable v;
-
-        public Operator o;
-
-        public int t;
-
-        public string d = string.Empty;
-    }
-
-    private record Workflow {
-        public List<Rule> Rules = new List<Rule>();
-
-        public string dd = string.Empty;
-
-        public override string ToString() {
-            var sb = new StringBuilder();
-            sb.Append("{");
-
-            foreach (var rule in Rules) {
-                sb.Append($"{rule.v}{(rule.o == Operator.GreaterThan ? ">" : "<")}{rule.t}:{rule.d},");
-            }
-
-            sb.Append(dd);
-            sb.Append("}");
-            return sb.ToString();
-        }
-    }
-
-    private record Part {
-        public int x;
-
-        public int m;
-
-        public int a;
-
-        public int s;
-
-        public override string ToString() {
-            return $"x={x},m={m},a={a},s={s}";
-        }
-    }
-
     public override long SolvePartOne() {
-        var inputSections = Input.SplitBy("\n\n");
-        var workflowSection = inputSections[0].Split('\n');
-        var partsSection = inputSections[1].Split('\n');
-
-        var workflows = new Dictionary<string, Workflow>();
-        foreach (var workflowInput in workflowSection) {
-            var bracePosition = workflowInput.IndexOf('{');
-            var k = workflowInput[0..bracePosition];
-
-            var workflowParts = workflowInput[(bracePosition + 1)..^1].Split(',');
-
-            var w = new Workflow {
-                dd = workflowParts[^1]
-            };
-
-            foreach (var ruleInput in workflowParts[0..^1]) {
-                var ruleParts = ruleInput.Split(':');
-                var v = ruleParts[0][0] switch {
-                    'x' => Variable.x,
-                    'm' => Variable.m,
-                    'a' => Variable.a,
-                    's' => Variable.s,
-                    _ => throw new InvalidOperationException()
-                };
-                var o = ruleParts[0][1] == '<' ? Operator.LessThan : Operator.GreaterThan;
-                var t = int.Parse(ruleParts[0][2..]);
-                var d = ruleParts[1];
-
-                w.Rules.Add(new Rule { v = v, o = o, t = t, d = d });
-            }
-            
-            Debug.Assert(workflowInput == k + w);
-            workflows.Add(k, w);
-        }
-
-        var parts = new List<Part>(partsSection.Length);
-        foreach (var partInput in partsSection) {
-            var partParts = partInput[1..^1].Split(',');
-            parts.Add(
-                new Part {
-                    x = int.Parse(partParts[0][2..]),
-                    m = int.Parse(partParts[1][2..]),
-                    a = int.Parse(partParts[2][2..]),
-                    s = int.Parse(partParts[3][2..]),
-                });
-        }
+        var (workflows, parts) = Parse(Input);
 
         var accept = new List<Part>();
 
@@ -133,13 +27,14 @@ public class Day19 : Solver {
 
                 foreach (var rule in workflow.Rules) {
                     var v =
-                        (rule.v == Variable.x) ? part.x
-                        : (rule.v == Variable.m) ? part.m
-                        : (rule.v == Variable.a) ? part.a
-                        : (rule.v == Variable.s) ? part.s
+                        rule.v == Variable.x ? part.x
+                        : rule.v == Variable.m ? part.m
+                        : rule.v == Variable.a ? part.a
+                        : rule.v == Variable.s ? part.s
                         : throw new InvalidOperationException();
 
-                    if (rule.o == Operator.LessThan && v < rule.t || rule.o == Operator.GreaterThan & v > rule.t) {
+                    if ((rule.o == Operator.LessThan && v < rule.t) ||
+                        (rule.o == Operator.GreaterThan) & (v > rule.t)) {
                         currentLocation = rule.d;
                         break;
                     }
@@ -157,7 +52,117 @@ public class Day19 : Solver {
         return accept.Sum(p => p.x + p.m + p.a + p.s);
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo() {
+        throw new NotImplementedException("Solve part 1 first");
+    }
+
+    private static (Dictionary<string, Workflow> workflows, List<Part> parts) Parse(string input) {
+        var inputSections = input.SplitBy("\n\n");
+        var workflowSection = inputSections[0].Split('\n');
+        var partsSection = inputSections[1].Split('\n');
+
+        var workflows = new Dictionary<string, Workflow>();
+        foreach (var workflowInput in workflowSection) {
+            var bracePosition = workflowInput.IndexOf('{');
+            var k = workflowInput[..bracePosition];
+
+            var workflowParts = workflowInput[(bracePosition + 1)..^1].Split(',');
+
+            var w = new Workflow {
+                dd = workflowParts[^1]
+            };
+
+            foreach (var ruleInput in workflowParts[..^1]) {
+                var ruleParts = ruleInput.Split(':');
+                var v = ruleParts[0][0] switch {
+                    'x' => Variable.x,
+                    'm' => Variable.m,
+                    'a' => Variable.a,
+                    's' => Variable.s,
+                    _ => throw new InvalidOperationException()
+                };
+                var o = ruleParts[0][1] == '<' ? Operator.LessThan : Operator.GreaterThan;
+                var t = int.Parse(ruleParts[0][2..]);
+                var d = ruleParts[1];
+
+                w.Rules.Add(new Rule { v = v, o = o, t = t, d = d });
+            }
+
+            Debug.Assert(workflowInput == k + w);
+            workflows.Add(k, w);
+        }
+
+        var parts = new List<Part>(partsSection.Length);
+        foreach (var partInput in partsSection) {
+            var partParts = partInput[1..^1].Split(',');
+            parts.Add(
+                new Part {
+                    x = int.Parse(partParts[0][2..]),
+                    m = int.Parse(partParts[1][2..]),
+                    a = int.Parse(partParts[2][2..]),
+                    s = int.Parse(partParts[3][2..])
+                });
+        }
+        return (workflows, parts);
+    }
+
+    private record Part {
+        public int x;
+
+        public int m;
+
+        public int a;
+
+        public int s;
+
+        public override string ToString() {
+            return $"x={x},m={m},a={a},s={s}";
+        }
+    }
+
+    private record Workflow {
+        public readonly List<Rule> Rules = new();
+
+        public string dd = string.Empty;
+
+        public override string ToString() {
+            var sb = new StringBuilder();
+            sb.Append("{");
+
+            foreach (var rule in Rules)
+                sb.Append($"{rule.v}{(rule.o == Operator.GreaterThan ? ">" : "<")}{rule.t}:{rule.d},");
+
+            sb.Append(dd);
+            sb.Append("}");
+            return sb.ToString();
+        }
+    }
+
+    private record Rule {
+        public string d = string.Empty;
+
+        public Operator o;
+
+        public int t;
+
+        public Variable v;
+    }
+
+    private enum Operator {
+        LessThan,
+
+        GreaterThan
+    }
+
+    private enum Variable {
+        x,
+
+        m,
+
+        a,
+
+        s
+    }
 
     private const string? ExampleInput = @"
 px{a<2006:qkq,m>2090:A,rfg}
