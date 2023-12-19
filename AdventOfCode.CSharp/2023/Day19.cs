@@ -53,7 +53,123 @@ public class Day19 : Solver {
     }
 
     public override long SolvePartTwo() {
-        throw new NotImplementedException("Solve part 1 first");
+        var (workflows, _) = Parse(Input);
+
+        var accept = new List<PartRange>();
+        var ranges = new Queue<PartRange>();
+        ranges.Enqueue(
+            new PartRange {
+                location = "in",
+                x1 = 1, x2 = 4000,
+                m1 = 1, m2 = 4000,
+                a1 = 1, a2 = 4000,
+                s1 = 1, s2 = 4000,
+            });
+
+        while (ranges.TryDequeue(out var range)) {
+            Trace.WriteLine(range);
+            
+            if (range.location == "A") {
+                accept.Add(range);
+                continue;
+            }
+
+            if (range.location == "R")
+                continue;
+
+            var workflow = workflows[range.location];
+            foreach (var rule in workflow.Rules) {
+                // detect empty remaining range
+                if (range == default)
+                    break;
+                
+                switch (rule.v) {
+                    case Variable.x:
+                        if (rule.o == Operator.LessThan && range.x1 < rule.t) {
+                            ranges.Enqueue(range with { x2 = Math.Min(range.x2, rule.t - 1), location = rule.d});
+
+                            if (rule.t < range.x2)
+                                range.x1 = rule.t;
+                            else
+                                range = default;
+                        }
+                        else if (range.x2 > rule.t) {
+                            ranges.Enqueue(range with { x1 = Math.Max(range.x1, rule.t + 1), location = rule.d });
+                            
+                            if (rule.t > range.x1)
+                                range.x2 = rule.t;
+                            else
+                                range = default;
+                        }
+                        break;
+
+                    case Variable.m:
+                        if (rule.o == Operator.LessThan && range.m1 < rule.t) {
+                            ranges.Enqueue(range with { m2 = Math.Min(range.m2, rule.t - 1), location = rule.d});
+
+                            if (rule.t < range.m2)
+                                range.m1 = rule.t;
+                            else
+                                range = default;
+                        }
+                        else if (range.m2 > rule.t) {
+                            ranges.Enqueue(range with { m1 = Math.Max(range.m1, rule.t + 1), location = rule.d });
+                            
+                            if (rule.t > range.m1)
+                                range.m2 = rule.t;
+                            else
+                                range = default;
+                        }
+                        break;
+                    
+                    case Variable.a:
+                        if (rule.o == Operator.LessThan && range.a1 < rule.t) {
+                            ranges.Enqueue(range with { a2 = Math.Min(range.a2, rule.t - 1), location = rule.d});
+
+                            if (rule.t < range.a2)
+                                range.a1 = rule.t;
+                            else
+                                range = default;
+                        }
+                        else if (range.a2 > rule.t) {
+                            ranges.Enqueue(range with { a1 = Math.Max(range.a1, rule.t + 1), location = rule.d });
+                            
+                            if (rule.t > range.a1)
+                                range.a2 = rule.t;
+                            else
+                                range = default;
+                        }
+                        break;
+                    
+                    case Variable.s:
+                        if (rule.o == Operator.LessThan && range.s1 < rule.t) {
+                            ranges.Enqueue(range with { s2 = Math.Min(range.s2, rule.t - 1), location = rule.d});
+
+                            if (rule.t < range.s2)
+                                range.s1 = rule.t;
+                            else
+                                range = default;
+                        }
+                        else if (range.s2 > rule.t) {
+                            ranges.Enqueue(range with { s1 = Math.Max(range.s1, rule.t + 1), location = rule.d });
+                            
+                            if (rule.t > range.s1)
+                                range.s2 = rule.t;
+                            else
+                                range = default;
+                        }
+                        break;
+                    
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            
+            if (range != default)
+                ranges.Enqueue(range with { location = workflow.dd });
+        }
+        
+        return accept.Sum(p => (long)(1 + p.x2 - p.x1) * (1 + p.m2 - p.m1) * (1 + p.a2 - p.a1) * (1 + p.s2 - p.s1));
     }
 
     private static (Dictionary<string, Workflow> workflows, List<Part> parts) Parse(string input) {
@@ -117,6 +233,30 @@ public class Day19 : Solver {
 
         public override string ToString() {
             return $"x={x},m={m},a={a},s={s}";
+        }
+    }
+
+    private record PartRange {
+        public string location = "in";
+        
+        public int x1;
+        
+        public int x2;
+
+        public int m1;
+
+        public int m2;
+
+        public int a1;
+
+        public int a2;
+
+        public int s1;
+
+        public int s2;
+
+        public override string ToString() {
+            return $"x={x1}--{x2},m={m1}--{m2},a={a1}--{a2},s={s1}--{s2} @ {location}";
         }
     }
 
@@ -188,5 +328,11 @@ hdj{m>838:A,pv}
     public void SolvesPartOneExample() {
         var actual = new Day19(ExampleInput, Output).SolvePartOne();
         Assert.Equal(19114, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day19(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(167409079868000, actual);
     }
 }
