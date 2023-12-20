@@ -15,27 +15,47 @@ public class Day20 : Solver {
     public override long SolvePartOne() {
         int lowPulses = 0, highPulses = 0;
         var circuit = Parse(Input);
-        var pulses = new Queue<(string module, Signal signal)>();
+        var pulses = new Queue<(string sender, string receiver, int index, Signal signal)>();
 
         for (var i = 0; i < 1000; ++i) {
             // queue button push
-            pulses.Enqueue(("broadcaster", Signal.Low));
+            pulses.Enqueue(("button", "broadcaster", 0, Signal.Low));
 
             // now dequeue until done
             while (pulses.TryDequeue(out var pulse)) {
+                Trace.WriteLine($"{pulse.sender} -{(pulse.signal == Signal.Low ? "low" : "high")}-> {pulse.receiver} @ {pulse.index}");
                 // record the pulse
                 if (pulse.signal == Signal.High)
                     highPulses++;
                 else
                     lowPulses++;
 
-                var destinations = circuit.Destinations[pulse.module];
+                // skip circuits that are output-only
+                if (!circuit.Destinations.TryGetValue(pulse.receiver, out var destinations))
+                    continue;
                 
                 // determine the module type
-                switch (pulse.module[0]) {
+                switch (pulse.receiver[0]) {
                     case 'b':
-                        foreach (var (module, _) in destinations)
-                            pulses.Enqueue((module, pulse.signal));
+                        foreach (var (destinationModule, destinationIndex) in destinations)
+                            pulses.Enqueue((pulse.receiver, destinationModule, destinationIndex, pulse.signal));
+                        break;
+                    
+                    case '%':
+                        if (pulse.signal == Signal.High)
+                            continue;
+                        
+                        var flopSignal = circuit.ToggleRegister(pulse.receiver);
+                        foreach (var (destinationModule, destinationIndex) in destinations)
+                            pulses.Enqueue((pulse.receiver, destinationModule, destinationIndex, flopSignal));
+                        break;
+                    
+                    case '&':
+                        circuit.SetRegister(pulse.receiver, pulse.index, pulse.signal);
+                        var conSignal = circuit.Registers[pulse.receiver] == (int)Signal.High ? Signal.Low : Signal.High;
+                        
+                        foreach (var (destinationModule, destinationIndex) in destinations)
+                            pulses.Enqueue((pulse.receiver, destinationModule, destinationIndex, conSignal));
                         break;
                 }
             }
@@ -99,6 +119,10 @@ public class Day20 : Solver {
                 Registers[module] &= ~bit; // unset the bit, life is backwards
             else
                 Registers[module] |= bit; // set the bit, life is backwards
+        }
+
+        public Signal ToggleRegister(string module) {
+            return (Signal)(Registers[module] = 1 - Registers[module]);
         }
     }
     
