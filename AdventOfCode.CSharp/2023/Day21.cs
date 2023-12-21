@@ -16,25 +16,29 @@ public class Day21 : Solver {
         var h = points.Max(p => p.y) + 1;
         
         var plots = new HashSet<(int x, int y)>(points.CoordinatesWhere(c => c == '.' || c == 'S'));
-        var reachableEvens = new HashSet<(int x, int y)>();
-        var reachableOdds = new HashSet<(int x, int y)>();
-
-        var queue = new PriorityQueue<(int x, int y), int>();
-        var seenPositions = new HashSet<(int x, int y)>();
-        
         var startingPosition = points.Single(p => p.value == 'S');
         var start = (startingPosition.x, startingPosition.y);
+        
+        var queue = new PriorityQueue<(int x, int y), int>();
         queue.Enqueue(start, 0);
-        seenPositions.Add(start);
+        
+        var reachablePositions = WalkPlots(queue, plots, w, h, steps);
+
+        // render grid
+        Render(steps, reachablePositions, start, plots, w, h);
+
+        return reachablePositions.Count(p => p.Value % 2 == steps % 2);
+    }
+
+    private static Dictionary<(int x, int y), int> WalkPlots(PriorityQueue<(int x, int y), int> queue, HashSet<(int x, int y)> plots, int w, int h, int steps) {
+        var seenPositions = new HashSet<(int x, int y)>();
+        var reachablePositions = new Dictionary<(int x, int y), int>();
         
         while (queue.TryDequeue(out var position, out var t)) {
             if (t > steps)
                 continue;
-            
-            if (t % 2 == 0)
-                reachableEvens.Add(position);
-            else
-                reachableOdds.Add(position);
+
+            reachablePositions[position] = t;
             
             var up = (position.x, position.y - 1);
             if (!seenPositions.Contains(up) && plots.Contains((Maths.wrap(position.x, w), Maths.wrap(position.y - 1, h)))) {
@@ -61,21 +65,29 @@ public class Day21 : Solver {
             }
         }
 
-        var reachable = steps % 2 == 0 ? reachableEvens : reachableOdds;
+        return reachablePositions;
+    }
 
-        // render grid
-        if (steps < 51) {
-            var grid = new PointGrid<(int x, int y)>(reachable, p => p.x, p => p.y);
+    private void Render(int steps, Dictionary<(int x, int y), int> reachablePositions, (int x, int y) start, HashSet<(int x, int y)> plots, int w, int h) {
+        var grid = new PointGrid<(int x, int y)>(reachablePositions.Keys, p => p.x, p => p.y);
+            
+        grid.Fill((x, y) =>
+            start.x == x && start.y == y ? 'S' :
+            reachablePositions.TryGetValue((x, y), out var i) ? (char)(i % 10 + '0') :
+            plots.Contains((Maths.wrap(x, w), Maths.wrap(y, h))) ? '.' : '#');
+            
+        Trace.WriteLine("Walking distances");
+        Trace.WriteLine(grid.Render());
 
-            grid.Fill((x, y) =>
-                start.x == x && start.y == y ? 'S' :
-                reachable.Contains((x, y)) ? 'O' :
-                plots.Contains((Maths.wrap(x, w), Maths.wrap(y, h))) ? '.' : '#');
+        var possibleEndPositions = reachablePositions.Where(p => p.Value % 2 == steps % 2).Select(p => p.Key);
+        grid.Fill((x, y) =>
+            start.x == x && start.y == y ? 'S' :
+            possibleEndPositions.Contains((x, y)) ? 'O' :
+            plots.Contains((Maths.wrap(x, w), Maths.wrap(y, h))) ? '.' : '#');
 
-            Trace.WriteLine(grid.Render());
-        }
-
-        return reachable.Count;
+        Trace.WriteLine();
+        Trace.WriteLine("Possible end positions");
+        Trace.WriteLine(grid.Render());
     }
 
     private const string? ExampleInput = @"
