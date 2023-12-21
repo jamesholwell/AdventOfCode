@@ -16,4 +16,8 @@ public static class Maths {
 
         return a;
     }
+
+    public static int mod(int a, int n) => wrap(a, n);
+    
+    public static int wrap(int a, int n) => ((a % n) + n) % n;
 }
