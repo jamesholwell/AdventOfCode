@@ -8,64 +8,62 @@ public class Day21 : Solver {
 
     public override long SolvePartOne() => SolvePartOne(64);
 
-    public long SolvePartOne(int maximumSteps) {
-        var positions = Input.SplitPoints();
-        var startingPosition = positions.Single(p => p.value == 'S');
-        var plots = new HashSet<(int x, int y)>(positions.CoordinatesWhere(c => c == '.' || c == 'S'));
-
-        var queue = new Queue<(int x, int y, int t)>();
-        var seenPositions = new HashSet<(int x, int y)>();
-        var start = (startingPosition.x, startingPosition.y, 0);
-        queue.Enqueue(start);
-        seenPositions.Add((startingPosition.x, startingPosition.y));
-        var lastT = 0;
+    private long SolvePartOne(int maximumSteps) {
+        if (maximumSteps % 2 != 0)
+            throw new NotImplementedException("Algorithm only considers evenly reachable spaces");
         
-        while (queue.TryDequeue(out var position)) {
-            if (position.t > lastT) {
-                lastT = position.t;
-                seenPositions.Clear();
-                Trace.WriteLine($"t = {lastT}; Queue has {queue.Count} elements");
-            }
-            seenPositions.Add((position.x, position.y));
-            
-            if (position.t >= maximumSteps)
+        var points = Input.SplitPoints();
+        var plots = new HashSet<(int x, int y)>(points.CoordinatesWhere(c => c == '.'));
+        var reachablePositions = new HashSet<(int x, int y)>();
+
+        var queue = new PriorityQueue<(int x, int y), int>();
+        var seenPositions = new HashSet<(int x, int y)>();
+        
+        var startingPosition = points.Single(p => p.value == 'S');
+        var start = (startingPosition.x, startingPosition.y);
+        queue.Enqueue(start, 0);
+        seenPositions.Add(start);
+        
+        while (queue.TryDequeue(out var position, out var t)) {
+            if (t > maximumSteps)
                 continue;
 
-            var up = (position.x, position.y - 1);
-            if (!seenPositions.Contains(up) && plots.Contains(up))
-                queue.Enqueue(position with { y = position.y - 1, t = position.t + 1 });
+            if (t % 2 == 0)
+                reachablePositions.Add(position);
             
+            var up = (position.x, position.y - 1);
+            if (!seenPositions.Contains(up) && plots.Contains(up)) {
+                seenPositions.Add(up);
+                queue.Enqueue(position with { y = position.y - 1 }, t + 1);
+            }
+
             var right = (position.x + 1, position.y);
-            if (!seenPositions.Contains(right) && plots.Contains(right))
-                queue.Enqueue(position with { x = position.x + 1, t = position.t + 1 });
+            if (!seenPositions.Contains(right) && plots.Contains(right)) {
+                seenPositions.Add(right);
+                queue.Enqueue(position with { x = position.x + 1}, t + 1 );
+            }
             
             var down = (position.x, position.y + 1);
-            if (!seenPositions.Contains(down) && plots.Contains(down))
-                queue.Enqueue(position with { y = position.y + 1, t = position.t + 1 });
+            if (!seenPositions.Contains(down) && plots.Contains(down)) {
+                seenPositions.Add(down);
+                queue.Enqueue(position with { y = position.y + 1}, t + 1 );
+            }
             
             var left = (position.x - 1, position.y);
-            if (!seenPositions.Contains(left) && plots.Contains(left))
-                queue.Enqueue(position with { x = position.x - 1, t = position.t + 1});
+            if (!seenPositions.Contains(left) && plots.Contains(left)) {
+                seenPositions.Add(left);
+                queue.Enqueue(position with { x = position.x - 1}, t + 1);
+            }
         }
         
-        // var minX = plots.Min(p => p.x);
-        // var maxX = plots.Max(p => p.x);
-        // var minY = plots.Min(p => p.y);
-        // var maxY = plots.Max(p => p.y);
-        //
-        // var grid = new char[1 + maxY - minY, 1 + maxX - minX];
-        // grid.Initialize('#');
-        //
-        // foreach (var point in plots)
-        //     grid[point.y - minY, point.x - minX] = '.';
-        //
-        // foreach (var point in seenPositions)
-        //     if (point.t == maximumSteps)
-        //         grid[point.y - minY, point.x - minX] = 'O';
-        //
-        // Output.WriteLine(grid.Render());
+        var grid = new PointGrid<(int x, int y, char c)>(points, p => p.x, p => p.y, p => p.c);
         
-        return seenPositions.Count;
+        foreach (var point in reachablePositions)
+            grid.Set(point.x, point.y, 'O');
+        
+        Trace.WriteLine(grid.Render());
+        
+        return reachablePositions.Count;
     }
 
     public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
