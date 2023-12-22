@@ -10,8 +10,9 @@ public class Day22 : Solver {
 
     public override long SolvePartOne() {
         var bricks = Parse(Input);
-
-        Trace.WriteLine(Render(bricks));
+        var settled = Settle(bricks);
+        
+        Trace.WriteLine(Render(settled));
         
         return bricks.Length;
     }
@@ -43,6 +44,30 @@ public class Day22 : Solver {
         return bricks;
     }
 
+    private (int x1, int x2, int y1, int y2, int z1, int z2, string label)[] Settle((int x1, int x2, int y1, int y2, int z1, int z2, string label)[] bricks) {
+        var settled = new (int x1, int x2, int y1, int y2, int z1, int z2, string label)[bricks.Length];
+        Array.Copy(bricks, settled, bricks.Length);
+
+        for (var i = 0; i < bricks.Length; ++i) {
+            var brick = bricks[i];
+
+            if (brick.z1 == 1) {
+                settled[i] = brick;
+                continue;
+            }
+            
+            // walk down the stack looking for an intersection
+            int j;
+            for (j = i - 1; j > 0; --j)
+                if (brick.x1 <= settled[j].x2 && settled[j].x1 <= brick.x2 && brick.y1 <= settled[j].y2 && settled[j].y1 <= brick.y2)
+                    break;
+
+            settled[i] = brick with { z1 = settled[j].z2 + 1, z2 = settled[j].z2 + 1 + brick.z2 - brick.z1 };
+        }
+        
+        return settled;
+    }
+    
     [SuppressMessage("ReSharper", "AccessToModifiedClosure")]
     private string Render((int x1, int x2, int y1, int y2, int z1, int z2, string label)[] bricks) {
         //var minX = bricks.Min(b => b.x1);
@@ -191,6 +216,25 @@ public class Day22 : Solver {
         var actual = Render(Parse(ExampleInput!));
         Output.WriteLine(actual);
         
+        Assert.Equal(expected, actual);
+    }
+    
+    [Fact]
+    public void CalculatesSettledExampleCorrectly() {
+        const string expected = @"
+>  z     x      y 
+        012    012
+   6    .G.    .G.
+   5    .G.    .G.
+   4    FFF    .F.
+   3    D.E    ???
+   2    ???    B.C
+   1    .A.    AAA
+   0    ---    ---
+";
+        
+        var actual = Render(Settle(Parse(ExampleInput!)));
+        Output.WriteLine(actual);
         Assert.Equal(expected, actual);
     }
     
