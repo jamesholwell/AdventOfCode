@@ -7,24 +7,95 @@ namespace AdventOfCode.CSharp._2023;
 public class Day21 : Solver {
     public Day21(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
 
-    public override long SolvePartOne() => Solve(64);
+    public override long SolvePartOne() {
+        var (plots, s, w, h) = Initialize(Input);
+        var reachable = BruteForceSolve(plots, 64, (s.x, s.y), w, h);
+        
+        // render visualisation
+        var grid = new PointGrid<(int x, int y)>(reachable, p => p.x, p => p.y);
 
-    public override long SolvePartTwo() => Solve(26501365);
+        grid.Fill((x, y) =>
+            s.x == x && s.y == y ? 'S' :
+            reachable.Contains((x, y)) ? 'O' :
+            plots.Contains((Maths.wrap(x, w), Maths.wrap(y, h))) ? '.' : '#');
 
-    private long Solve(int steps) {
-        var points = Input.SplitPoints();
+        Trace.WriteLine(grid.Render());
+            
+        // return the answer
+        return reachable.Count();
+    }
+
+    public override long SolvePartTwo() {
+        var (plots, s, w, h) = Initialize(Input);
+        
+        // heuristic only works for squares
+        // ReSharper disable once InlineTemporaryVariable - for readability!
+        var sz = w;
+        Debug.Assert(sz == h);
+        
+        // heuristic only works for n-traversals + 1 half
+        var r = (sz - 1) / 2;
+        Debug.Assert((26501365 % sz) == r);
+        
+        Output.WriteLine("Beginning drift detection:");
+
+        var variances = new List<long>();
+        for (var i = 0; i < 5; ++i) {
+            var steps = sz * i + r;
+            var bf = BruteForceSolve(plots, steps, s, sz, sz).Count;
+            var algo = HeuristicSolve(plots, steps, s, sz);
+
+            var variance = bf - algo;
+            variances.Add(variance);
+            Output.WriteLine($"n = {i} ({steps} steps): bf = {bf}, algo = {algo}, variance = {variance}");
+        }
+
+        var pairwiseVariance = variances.Pairwise().Select(vp => vp.Item2 - vp.Item1).ToArray();
+        if (pairwiseVariance.Distinct().Count() > 1) {
+            Output.WriteLine($"... drift detection failed: {string.Join(", ", variances)}");
+            Output.WriteLine();
+            return -1;
+        }
+
+        var initialVariance = variances.First();
+        var drift = pairwiseVariance.First();
+        Output.WriteLine($"... detected drift of {drift}");
+        Output.WriteLine();
+        
+        Output.WriteLine("Beginning test:");
+        var testSteps = sz * 10 + r;
+        var bfTest = BruteForceSolve(plots, testSteps, s, sz, sz).Count;
+        var algoTest = HeuristicSolve(plots, testSteps, s, sz) + initialVariance + 10 * drift;
+        var varianceTest = algoTest - bfTest;
+        Output.WriteLine($"n = 10 ({testSteps} steps): bf = {bfTest}, algo = {algoTest}, variance = {varianceTest}");
+
+        if (varianceTest != 0) {
+            Output.WriteLine("... test run failed");
+            Output.WriteLine();
+            return -1;
+        }
+
+        var n = 26501365 / sz;
+        return HeuristicSolve(plots, 26501365, s, sz) + initialVariance + n * drift;
+    }
+
+    private (HashSet<(int x, int y)> plots, (int x, int y) startingPosition, int w, int h) Initialize(string input) {
+        var points = input.SplitPoints();
+        var plots = new HashSet<(int x, int y)>(points.CoordinatesWhere(c => c == '.' || c == 'S'));
+        var startingPosition = points.Single(p => p.value == 'S');
         var w = points.Max(p => p.x) + 1;
         var h = points.Max(p => p.y) + 1;
-        
-        var plots = new HashSet<(int x, int y)>(points.CoordinatesWhere(c => c == '.' || c == 'S'));
+        return (plots, (startingPosition.x, startingPosition.y), w, h);
+    }
+
+    private IReadOnlySet<(int x, int y)> BruteForceSolve(IReadOnlySet<(int x, int y)> plots, int steps,
+        (int x, int y) start, int w, int h) {
         var reachableEvens = new HashSet<(int x, int y)>();
         var reachableOdds = new HashSet<(int x, int y)>();
 
         var queue = new PriorityQueue<(int x, int y), int>();
         var seenPositions = new HashSet<(int x, int y)>();
         
-        var startingPosition = points.Single(p => p.value == 'S');
-        var start = (startingPosition.x, startingPosition.y);
         queue.Enqueue(start, 0);
         seenPositions.Add(start);
         
@@ -62,42 +133,17 @@ public class Day21 : Solver {
             }
         }
 
-        var reachable = steps % 2 == 0 ? reachableEvens : reachableOdds;
-
-        // render grid
-        if (steps < 51) {
-            var grid = new PointGrid<(int x, int y)>(reachable, p => p.x, p => p.y);
-
-            grid.Fill((x, y) =>
-                start.x == x && start.y == y ? 'S' :
-                reachable.Contains((x, y)) ? 'O' :
-                plots.Contains((Maths.wrap(x, w), Maths.wrap(y, h))) ? '.' : '#');
-
-            Trace.WriteLine(grid.Render());
-        }
-
-        return reachable.Count;
+        return steps % 2 == 0 ? reachableEvens : reachableOdds;
     }
     
-    private long SolveDiagonal(int steps) {
-        var points = Input.SplitPoints();
-        var sz = points.Max(p => p.x) + 1;
-        Debug.Assert(sz == points.Max(p => p.y) + 1);
-
-        // check that it has the magical properties required
-        if ((steps % sz) != (sz - 1) / 2)
-            return -1;
-        
-        var plots = new HashSet<(int x, int y)>(points.CoordinatesWhere(c => c == '.' || c == 'S'));
+    private long HeuristicSolve(IReadOnlySet<(int x, int y)> plots, int steps, (int x, int y) start, int sz) {
+        // initialize the queue of points to explore and the path distances
         var reachablePositions = new Dictionary<(int x, int y), int>();
-
         var queue = new PriorityQueue<(int x, int y), int>();
-
-        var startingPosition = points.Single(p => p.value == 'S');
-        var start = (startingPosition.x, startingPosition.y);
         queue.Enqueue(start, 0);
         reachablePositions.Add(start, 0);
         
+        // we don't wrap, because we just extrapolate based on the first one
         while (queue.TryDequeue(out var position, out var t)) {
             if (t > steps)
                 continue;
@@ -126,31 +172,33 @@ public class Day21 : Solver {
                 queue.Enqueue(left, t + 1);
             }
         }
-
-        // model the expanding diamond!
         
-        // this is the 'number of rings' around the central piece
+        // for our algorithm, work out the size of the central region
         var div = (long)steps / sz;
         
-        // this is the 'number of steps remaining' after moving to the centre of the edges
+        // this is the 'number of steps remaining' after moving to the centre of the edge tile
         var rem = (long)steps % sz;
 
+        // count up the central region
         var evenTiles = (1 + div) * (1 + div);
         var evenTileSpaces = reachablePositions.Count(p => p.Value % 2 == 0);
         
         var oddTiles = div * div;
         var oddTileSpaces = reachablePositions.Count(p => p.Value % 2 == 1);
 
+        // count up the tiles on the long edges
         var edgeTiles = div;
         var edgeAdditionalSpaces =reachablePositions.Count(p => p.Value % 2 == 1 && p.Value > rem);
         
+        // subtract the over-counting on the pointy edges
         var pointyTiles = (div + 1);
-        var pointyOvercountedSpaces = reachablePositions.Count(p => p.Value % 2 == 0 && p.Value > rem);
+        var pointyOverCountedSpaces = reachablePositions.Count(p => p.Value % 2 == 0 && p.Value > rem);
 
+        // return our algorithmic result
         return evenTiles * evenTileSpaces 
                + oddTiles * oddTileSpaces 
                + edgeTiles * edgeAdditionalSpaces
-               - pointyTiles * pointyOvercountedSpaces;
+               - pointyTiles * pointyOverCountedSpaces;
     }
 
     private const string? ExampleInput = @"
@@ -167,7 +215,7 @@ public class Day21 : Solver {
 ...........
 ";
     
-    private const string? TrivialInput = @"
+    private const string TrivialInput = @"
 .....
 .....
 ..S..
@@ -175,7 +223,7 @@ public class Day21 : Solver {
 .....
 ";
     
-    private const string? DiagonalInput = @"
+    private const string DiagonalInput = @"
 .............
 .........#.#.
 .##........#.
@@ -198,8 +246,9 @@ public class Day21 : Solver {
     [InlineData(3, 6)]
     [InlineData(6, 16)]
     public void SolvesPartOneExamples(int steps, int expected) {
-        var actual = new Day21(ExampleInput, Output).Solve(steps);
-        Assert.Equal(expected, actual);
+        var (plots, s, w, h) = Initialize(ExampleInput!);
+        var actual = BruteForceSolve(plots, steps, s, w, h);
+        Assert.Equal(expected, actual.Count);
     }
     
     [Theory]
@@ -211,8 +260,9 @@ public class Day21 : Solver {
     //[InlineData(1000, 668697)] - works but is slow
     //[InlineData(5000, 16733044)] - works but is slow
     public void SolvesPartTwoExamples(int steps, int expected) {
-        var actual = new Day21(ExampleInput, Output).Solve(steps);
-        Assert.Equal(expected, actual);
+        var (plots, s, w, h) = Initialize(ExampleInput!);
+        var actual = BruteForceSolve(plots, steps, s, w, h);
+        Assert.Equal(expected, actual.Count);
     }
     
     [Theory]
@@ -221,15 +271,17 @@ public class Day21 : Solver {
     [InlineData(12)]
     [InlineData(23 * 5 + 2)]
     public void SolvesTrivialExampleDiagonally(int steps) {
+        var (plots, s, w, h) = Initialize(TrivialInput);
+
         var stopwatch = new Stopwatch();
         stopwatch.Start();
-        var expected = new Day21(TrivialInput, Output).Solve(steps);
+        var expected = BruteForceSolve(plots, steps, s, w, h).Count;
         stopwatch.Stop();
         var bfTime = stopwatch.ElapsedTicks;
         
         stopwatch.Reset();
         stopwatch.Start();
-        var actual = new Day21(TrivialInput, Output).SolveDiagonal(steps);
+        var actual = HeuristicSolve(plots, steps, s, w);
         stopwatch.Stop();
         var algoTime = stopwatch.ElapsedTicks;
         
@@ -244,8 +296,10 @@ public class Day21 : Solver {
     [InlineData(32)]
     [InlineData(23 * 13 + 6)]
     public void SolvesDiagonalExample(int steps) {
-        var expected = new Day21(DiagonalInput, Output).Solve(steps);
-        var actual = new Day21(DiagonalInput, Output).SolveDiagonal(steps);
+        var (plots, s, w, h) = Initialize(DiagonalInput);
+        var expected = BruteForceSolve(plots, steps, s, w, h).Count;
+        var actual = HeuristicSolve(plots, steps, s, w);
+
         Assert.Equal(expected, actual);
     }
 }
