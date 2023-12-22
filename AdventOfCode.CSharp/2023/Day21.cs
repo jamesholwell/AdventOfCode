@@ -8,7 +8,7 @@ public class Day21 : Solver {
 
     public override long SolvePartOne() => Solve(64);
 
-    public override long SolvePartTwo() => Solve(26501365);
+    public override long SolvePartTwo() => AdvancedSolve(26501365);
 
     private long Solve(int steps) {
         var points = Input.SplitPoints();
@@ -28,6 +28,52 @@ public class Day21 : Solver {
         Render(steps, reachablePositions, start, plots, w, h);
 
         return reachablePositions.Count(p => p.Value % 2 == steps % 2);
+    }
+    
+    private long AdvancedSolve(int steps) {
+        var points = Input.SplitPoints();
+        var w = points.Max(p => p.x) + 1;
+        var h = points.Max(p => p.y) + 1;
+
+        if (steps < 3 * (w + h))
+            return Solve(steps);
+        
+        var plots = new HashSet<(int x, int y)>(points.CoordinatesWhere(c => c == '.' || c == 'S'));
+        var startingPosition = points.Single(p => p.value == 'S');
+        var start = (startingPosition.x, startingPosition.y);
+        
+        var queue = new PriorityQueue<(int x, int y), int>();
+        queue.Enqueue(start, 0);
+
+        // start with a basic ~~3x3 walk 
+        var reachablePositions = WalkPlots(queue, plots, w, h, 3 * (w + h));
+
+        // identify corners (the map has a border so you can always walk there)
+        var a = reachablePositions[(0, 0)];
+        var b = reachablePositions[(w - 1, 0)];
+        var c = reachablePositions[(w - 1, h - 1)];
+        var d = reachablePositions[(0, h - 1)];
+        Trace.WriteLine($"Corners {a}, {b}, {c}, {d}");
+
+        var centrePositions = reachablePositions.Where(p => 0 <= p.Key.x && p.Key.x < w && 0 <= p.Key.y && p.Key.y < h).ToDictionary(p => p.Key, p => p.Value);
+        var evenSectorValue = centrePositions.Where(p => p.Value % 2 == steps % 2);
+        var oddSectorValue = centrePositions.Where(p => p.Value % 2 != steps % 2);
+        
+        // now do a zoomed-out run
+        var sectors = new Dictionary<(int x, int y), int>();
+        
+        var z = (steps - h - a) / h;
+        Output.WriteLine(z);
+
+        for (var yo = -z; yo < z; ++yo) {
+            for (var xo = -(z - Math.Abs(yo)); xo <= (z - Math.Abs(yo)); ++xo) {
+                Output.WriteLine($"{yo} {xo}");
+            }
+            
+        }
+        
+        
+        return -1;
     }
 
     private static Dictionary<(int x, int y), int> WalkPlots(PriorityQueue<(int x, int y), int> queue, HashSet<(int x, int y)> plots, int w, int h, int steps) {
@@ -124,7 +170,7 @@ public class Day21 : Solver {
     //[InlineData(1000, 668697)] - works but is slow
     //[InlineData(5000, 16733044)] - works but is slow
     public void SolvesPartTwoExamples(int steps, int expected) {
-        var actual = new Day21(ExampleInput, Output).Solve(steps);
+        var actual = new Day21(ExampleInput, Output).AdvancedSolve(steps);
         Assert.Equal(expected, actual);
     }
 }
