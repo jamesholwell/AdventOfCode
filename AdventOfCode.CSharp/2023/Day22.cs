@@ -10,11 +10,20 @@ public class Day22 : Solver {
 
     public override long SolvePartOne() {
         var bricks = Parse(Input);
-        var settled = Settle(bricks);
+        Trace.WriteLine(Render(bricks));
+
+        Output.WriteLine();
         
+        var settled = Settle(bricks, out var dependencies, out var dependents);
         Trace.WriteLine(Render(settled));
+
+        // a brick is disposable if all of its dependents have at least one alternative
+        // (and all of the empty set == true)
+        var disposableBricks = 
+            dependents.Count(pair =>
+                pair.Value.All(dependent => dependencies[dependent].Count > 1));
         
-        return bricks.Length;
+        return disposableBricks;
     }
 
     public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
@@ -44,27 +53,45 @@ public class Day22 : Solver {
         return bricks;
     }
 
-    private (int x1, int x2, int y1, int y2, int z1, int z2, string label)[] Settle((int x1, int x2, int y1, int y2, int z1, int z2, string label)[] bricks) {
+    private (int x1, int x2, int y1, int y2, int z1, int z2, string label)[] Settle(
+        (int x1, int x2, int y1, int y2, int z1, int z2, string label)[] bricks, 
+        out Dictionary<string, List<string>> dependencies,
+        out Dictionary<string, List<string>> dependents) {
         var settled = new (int x1, int x2, int y1, int y2, int z1, int z2, string label)[bricks.Length];
         Array.Copy(bricks, settled, bricks.Length);
+
+        // A rests on floor => dependencies[A] = { }
+        dependencies = bricks.ToDictionary(b => b.label, _ => new List<string>());
+        
+        // A supports B, C => dependents[A] = { B, C }
+        dependents = bricks.ToDictionary(b => b.label, _ => new List<string>());
 
         for (var i = 0; i < bricks.Length; ++i) {
             var brick = bricks[i];
 
+            // shortcut bricks already on the floor
             if (brick.z1 == 1) {
                 settled[i] = brick;
                 continue;
             }
             
             // walk down the stack looking for an intersection
-            int j;
-            for (j = i - 1; j > 0; --j)
+            var potentials = new List<(int index, int z2)>();
+            for (var j = i - 1; j >= 0; --j) {
                 if (brick.x1 <= settled[j].x2 && settled[j].x1 <= brick.x2 && brick.y1 <= settled[j].y2 && settled[j].y1 <= brick.y2)
-                    break;
+                    potentials.Add((j, settled[j].z2));
+            }
 
-            settled[i] = brick with { z1 = settled[j].z2 + 1, z2 = settled[j].z2 + 1 + brick.z2 - brick.z1 };
+            // test the highest point we rested, and rest upon those guys
+            var maxPotential = potentials.Count == 0 ? 0 : potentials.Max(p => p.z2);
+            foreach (var dependency in potentials.Where(p => p.z2 == maxPotential)) {
+                dependencies[brick.label].Add(settled[dependency.index].label);
+                dependents[settled[dependency.index].label].Add(brick.label);
+            }
+            
+            settled[i] = brick with { z1 = maxPotential + 1, z2 = maxPotential + 1 + brick.z2 - brick.z1 };
         }
-        
+
         return settled;
     }
     
@@ -233,9 +260,48 @@ public class Day22 : Solver {
    0    ---    ---
 ";
         
-        var actual = Render(Settle(Parse(ExampleInput!)));
+        var actual = Render(Settle(Parse(ExampleInput!), out _, out _));
         Output.WriteLine(actual);
         Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void CalculatesExampleDependenciesCorrectly() {
+        /*
+
+            Brick A is the only brick supporting bricks B and C.
+            Brick B is one of two bricks supporting brick D and brick E.
+            Brick C is the other brick supporting brick D and brick E.
+            Brick D supports brick F.
+            Brick E also supports brick F.
+            Brick F supports brick G.
+            Brick G isn't supporting any bricks.
+
+               A
+             /   \
+            B     C
+            | \ / |
+            D     E
+               \  |
+                  F
+                  |
+                  G
+
+            A has no dependencies, and B and C as dependents
+
+         */
+        Settle(Parse(ExampleInput!), out var actualDependencies, out var actualDependents);
+        
+        Assert.Empty(actualDependencies["A"]);
+        Assert.Equal(2, actualDependents["A"].Count);
+        Assert.Contains("B", actualDependents["A"]);
+        Assert.Contains("C", actualDependents["A"]);
+        
+        Assert.Single(actualDependencies["B"]);
+        Assert.Contains("A", actualDependencies["B"]);
+        Assert.Equal(2, actualDependents["B"].Count);
+        Assert.Contains("D", actualDependents["B"]);
+        Assert.Contains("E", actualDependents["B"]);
     }
     
     [Fact]
