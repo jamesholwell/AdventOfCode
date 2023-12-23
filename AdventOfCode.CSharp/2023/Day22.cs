@@ -26,8 +26,31 @@ public class Day22 : Solver {
         return disposableBricks;
     }
 
-    public override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    public override long SolvePartTwo()  {
+        Settle(Parse(Input), out var dependencies, out var dependents);
 
+        var chainReactions =
+            dependents
+                .Where(pair => pair.Value.Any(dependent => dependencies[dependent].Count == 1))
+                .Sum(pair => {
+                    var q = new Queue<string>();
+                    var h = new HashSet<string>();
+                    q.Enqueue(pair.Key);
+                    h.Add(pair.Key);
+
+                    while (q.TryDequeue(out var removedBrick))
+                        foreach (var dependent in dependents[removedBrick].Where(dependent =>
+                                     dependencies[dependent].Count(dd => !h.Contains(dd)) == 0)) {
+                            h.Add(dependent);
+                            q.Enqueue(dependent);
+                        }
+
+                    return h.Count - 1;
+                });
+        
+        return chainReactions;
+    }
+    
     private (int x1, int x2, int y1, int y2, int z1, int z2, string label)[] Parse(string input) {
         var lines = Shared.Split(input);
 
@@ -308,5 +331,11 @@ public class Day22 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day22(ExampleInput, Output).SolvePartOne();
         Assert.Equal(5, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day22(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(7, actual);
     }
 }
