@@ -21,7 +21,7 @@ public class Day23 : Solver {
         return Solve(processedInput);
     }
 
-    private long Solve(string input) {
+    private long Solve(string input, bool ignoreHash = false) {
         var grid = input.SplitPoints();
         var i = 0;
         
@@ -65,7 +65,7 @@ public class Day23 : Solver {
             var tNext = t + 1;
 
             if (canUp) {
-                if (!queueHash.TryGetValue(up, out var ct) || tNext > ct) {
+                if (ignoreHash || !queueHash.TryGetValue(up, out var ct) || tNext > ct) {
                     queueHash[up] = tNext;
                     queue.Enqueue((up, pair.set), tNext);
 
@@ -75,7 +75,7 @@ public class Day23 : Solver {
             }
             
             if (canRight) {
-                if (!queueHash.TryGetValue(right, out var ct) || tNext > ct) {
+                if (ignoreHash || !queueHash.TryGetValue(right, out var ct) || tNext > ct) {
                     queueHash[right] = tNext;
                     queue.Enqueue((right, pair.set), tNext);
 
@@ -85,7 +85,7 @@ public class Day23 : Solver {
             }
             
             if (canDown) {
-                if (!queueHash.TryGetValue(down, out var ct) || tNext > ct) {
+                if (ignoreHash || !queueHash.TryGetValue(down, out var ct) || tNext > ct) {
                     queueHash[down] = tNext;
                     queue.Enqueue((down, pair.set), tNext);
 
@@ -95,7 +95,7 @@ public class Day23 : Solver {
             }
 
             if (canLeft) {
-                if (!queueHash.TryGetValue(left, out var ct) || tNext > ct) {
+                if (ignoreHash || !queueHash.TryGetValue(left, out var ct) || tNext > ct) {
                     queueHash[left] = tNext;
                     queue.Enqueue((left, pair.set), tNext);
                 }
@@ -130,11 +130,31 @@ public class Day23 : Solver {
 #.....###...###...#...#
 #####################.#
 ";
+    
+    
+    private const string SmallInput = @"
+#.###
+#...#
+#.#.#
+#...#
+#.#.#
+#...#
+###.#
+";
 
     [Fact]
     public void SolvesPartOneExample() {
         var actual = new Day23(ExampleInput, Output).SolvePartOne();
         Assert.Equal(94, actual);
+    }
+    
+    [Fact]
+    public void IllustrateProblemWithIgnoringReentry() {
+        var withoutHash = Solve(SmallInput, true);
+        Assert.Equal(12, withoutHash);
+        
+        var withHash = Solve(SmallInput);
+        Assert.Equal(12, withHash);
     }
     
     [Fact]
