@@ -67,9 +67,76 @@ public class Day23 : Solver {
 
         return paths.Max(p => p.Count) - 1;
     }
-
+    
     public override long SolvePartTwo() {
-        throw new NotImplementedException();
+        var grid = Input.SplitPoints();
+        var pathTiles = grid.CoordinatesWhere(p => p != '#').ToHashSet();
+
+        var start = (x: 1, y: 0);
+        var nextStep = start with { y = 1 };
+        var end = (x: grid.Max(p => p.x) - 1, y: grid.Max(p => p.y));
+
+        var nodes = new Dictionary<(int x, int y), Dictionary<(int x, int y), int>> {
+            { start, new Dictionary<(int x, int y), int>() },
+            { end, new Dictionary<(int x, int y), int>() }
+        };
+
+        var queue = new Queue<((int x, int y) position, (int x, int y) origin, (int x, int y) predecessor, int distance)>();
+        queue.Enqueue((nextStep, start, start, 1));
+        
+        while (queue.TryDequeue(out var pair)) {
+            if (nodes.ContainsKey(pair.position)) {
+                nodes[pair.origin].Add(pair.position, pair.distance);
+                continue;
+            }
+            
+            var up    = pair.position with { y = pair.position.y - 1 };
+            var right = pair.position with { x = pair.position.x + 1 };
+            var down  = pair.position with { y = pair.position.y + 1 };
+            var left  = pair.position with { x = pair.position.x - 1 };
+            
+            var canUp    = pair.predecessor != up && pathTiles.Contains(up);
+            var canRight = pair.predecessor != right && pathTiles.Contains(right);
+            var canDown  = pair.predecessor != down && pathTiles.Contains(down);
+            var canLeft  = pair.predecessor != left && pathTiles.Contains(left);
+
+            // exactly one option => continue
+            if ((canUp ? 1 : 0) + (canRight ? 1 : 0) + (canDown ? 1 : 0) + (canLeft ? 1 : 0) == 1) {
+                var next = canUp ? up : canRight ? right : canDown ? down : left;
+                queue.Enqueue((next, pair.origin, pair.position, pair.distance + 1));
+                continue;
+            }
+            
+            // more than one option => place node and split
+            nodes[pair.position] = new Dictionary<(int x, int y), int>();
+            nodes[pair.origin].Add(pair.position, pair.distance);
+            
+            if (canUp) 
+                queue.Enqueue((up, pair.position, pair.position, 1));
+            
+            if (canRight)
+                queue.Enqueue((right, pair.position, pair.position, 1));
+
+            if (canDown) 
+                queue.Enqueue((down, pair.position, pair.position, 1));
+            
+            if (canLeft) 
+                queue.Enqueue((left, pair.position, pair.position, 1));
+        }
+        
+        /*
+        // output a mermaid visualization of the network
+        var mermaid = new List<(int, string)>();
+        foreach (var node in nodes)
+            foreach (var neighbour in node.Value)
+                mermaid.Add((node.Key.x + node.Key.y, $"  x{node.Key.x}y{node.Key.y} --{neighbour.Value}--> x{neighbour.Key.x}y{neighbour.Key.y}"));
+        
+        Output.WriteLine("flowchart TD");
+        foreach (var mermaidLine in mermaid.OrderBy(m => m.Item1))
+            Output.WriteLine(mermaidLine.Item2);
+        */
+        
+        return -1;    
     }
 
     private const string? ExampleInput = @"
