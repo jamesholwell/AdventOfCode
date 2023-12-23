@@ -7,23 +7,7 @@ public class Day23 : Solver {
     public Day23(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
 
     public override long SolvePartOne() {
-        return Solve(Input);
-    }
-
-    public override long SolvePartTwo() {
-        var processedInput = Input.Replace('^', '.')
-            .Replace('>', '.')
-            .Replace('v', '.')
-            .Replace('<', '.');
-
-        Trace.WriteLine($"Input contains {processedInput.Count(c => c == '.')} spaces");
-        
-        return Solve(processedInput);
-    }
-
-    private long Solve(string input, bool ignoreHash = false) {
-        var grid = input.SplitPoints();
-        var i = 0;
+        var grid = Input.SplitPoints();
         
         // remember we are traversing backwards, so go against the slope
         var canUps = grid.CoordinatesWhere(c => c == '.' || c == 'v').ToHashSet();
@@ -31,23 +15,17 @@ public class Day23 : Solver {
         var canDowns = grid.CoordinatesWhere(c => c == '.' || c == '^').ToHashSet();
         var canLefts = grid.CoordinatesWhere(c => c == '.' || c == '>').ToHashSet();
 
-        var target = (x: 0, y: 0);
         var start = (x: grid.Max(p => p.x) - 1, y: grid.Max(p => p.y));
         var nextStep = start with { y = start.y - 1 };
         var paths = new List<HashSet<(int, int)>>();
         
-        var queue = new PriorityQueue<((int x, int y) position, HashSet<(int x, int y)> set), int>();
-        queue.Enqueue((nextStep, new HashSet<(int, int)>() { start }), 1);
-            
-        var queueHash = new Dictionary<(int x, int y), int> { { (start.x, start.y), 0 }, { (nextStep.x, nextStep.y), 1 } };
+        var queue = new Queue<((int x, int y) position, HashSet<(int x, int y)> set)>();
+        queue.Enqueue((nextStep, new HashSet<(int, int)>() { start }));
 
-        while (queue.TryDequeue(out var pair, out var t)) {
-            if (++i % 1000000 == 0)
-                Trace.WriteLine($"Queue contains {queue.Count} items, max walk is {paths.Max(p => p.Count)} at time {t}");
-            
+        while (queue.TryDequeue(out var pair)) {
             pair.set.Add(pair.position);
 
-            if (pair.position.y == target.y) {
+            if (pair.position.y == 0) {
                 paths.Add(pair.set);
                 continue;
             }
@@ -62,47 +40,36 @@ public class Day23 : Solver {
             var canDown  = !pair.set.Contains(down) && canDowns.Contains(down);
             var canLeft  = !pair.set.Contains(left) && canLefts.Contains(left);
 
-            var tNext = t + 1;
-
             if (canUp) {
-                if (ignoreHash || !queueHash.TryGetValue(up, out var ct) || tNext > ct) {
-                    queueHash[up] = tNext;
-                    queue.Enqueue((up, pair.set), tNext);
-
-                    if (canRight || canDown || canLeft)
-                        pair.set = new HashSet<(int x, int y)>(pair.set);
-                }
+                queue.Enqueue((up, pair.set));
+                
+                if (canRight || canDown || canLeft)
+                    pair.set = new HashSet<(int x, int y)>(pair.set);
             }
             
             if (canRight) {
-                if (ignoreHash || !queueHash.TryGetValue(right, out var ct) || tNext > ct) {
-                    queueHash[right] = tNext;
-                    queue.Enqueue((right, pair.set), tNext);
-
-                    if (canDown || canLeft)
-                        pair.set = new HashSet<(int x, int y)>(pair.set);
-                }
+                queue.Enqueue((right, pair.set));
+                
+                if (canDown || canLeft)
+                    pair.set = new HashSet<(int x, int y)>(pair.set);
             }
             
             if (canDown) {
-                if (ignoreHash || !queueHash.TryGetValue(down, out var ct) || tNext > ct) {
-                    queueHash[down] = tNext;
-                    queue.Enqueue((down, pair.set), tNext);
-
-                    if (canLeft)
-                        pair.set = new HashSet<(int x, int y)>(pair.set);
-                }
+                queue.Enqueue((down, pair.set));
+                
+                if (canLeft)
+                    pair.set = new HashSet<(int x, int y)>(pair.set);
             }
-
-            if (canLeft) {
-                if (ignoreHash || !queueHash.TryGetValue(left, out var ct) || tNext > ct) {
-                    queueHash[left] = tNext;
-                    queue.Enqueue((left, pair.set), tNext);
-                }
-            }
+            
+            if (canLeft) 
+                queue.Enqueue((left, pair.set));
         }
 
         return paths.Max(p => p.Count) - 1;
+    }
+
+    public override long SolvePartTwo() {
+        throw new NotImplementedException();
     }
 
     private const string? ExampleInput = @"
@@ -131,8 +98,7 @@ public class Day23 : Solver {
 #####################.#
 ";
     
-    
-    private const string SmallInput = @"
+    private const string SmallExample = @"
 #.###
 #...#
 #.#.#
@@ -149,12 +115,9 @@ public class Day23 : Solver {
     }
     
     [Fact]
-    public void IllustrateProblemWithIgnoringReentry() {
-        var withoutHash = Solve(SmallInput, true);
-        Assert.Equal(12, withoutHash);
-        
-        var withHash = Solve(SmallInput);
-        Assert.Equal(12, withHash);
+    public void SolvesSmallExample() {
+        var actual = new Day23(SmallExample, Output).SolvePartTwo();
+        Assert.Equal(12, actual);
     }
     
     [Fact]
