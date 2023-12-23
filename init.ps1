@@ -1,10 +1,10 @@
 ﻿function global:aoc {
     Param([parameter(ValueFromRemainingArguments = $true)][string[]]$args)
-    dotnet run --project .\AdventOfCode @args
+    dotnet run --property WarningLevel=0 --project .\AdventOfCode @args
 }
 
 function global:buildaoc {
-    dotnet build AdventOfCode -c Release
+    dotnet build AdventOfCode -c Release --property WarningLevel=0
 }
 
 function global:runaoc {
