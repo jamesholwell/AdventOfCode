@@ -85,8 +85,9 @@ public class Day23 : Solver {
         queue.Enqueue((nextStep, start, start, 1));
         
         while (queue.TryDequeue(out var pair)) {
-            if (nodes.ContainsKey(pair.position)) {
-                nodes[pair.origin].Add(pair.position, pair.distance);
+            if (nodes.TryGetValue(pair.position, out var node)) {
+                node[pair.origin] = pair.distance;
+                nodes[pair.origin][pair.position] = pair.distance;
                 continue;
             }
             
@@ -108,7 +109,7 @@ public class Day23 : Solver {
             }
             
             // more than one option => place node and split
-            nodes[pair.position] = new Dictionary<(int x, int y), int>();
+            nodes[pair.position] = new Dictionary<(int x, int y), int> { { pair.origin, pair.distance } };
             nodes[pair.origin].Add(pair.position, pair.distance);
             
             if (canUp) 
@@ -135,8 +136,38 @@ public class Day23 : Solver {
         foreach (var mermaidLine in mermaid.OrderBy(m => m.Item1))
             Output.WriteLine(mermaidLine.Item2);
         */
+
+        var exitDistance = 0;
+        if (nodes[end].Count == 1) {
+            Trace.WriteLine("Detected exit node: applying speedup by moving goal one node closer");
+            exitDistance = nodes[end].Values.Single();
+            end = nodes[end].Keys.Single();
+        }
         
-        return -1;    
+        Trace.WriteLine($"Beginning brute-force search of {nodes.Count} nodes");
+        var pathQueue = new Queue<((int x, int y) position, int distance, HashSet<(int x, int y)> set)>();
+        pathQueue.Enqueue((start, 0, new HashSet<(int, int)> { start }));
+
+        int i = 0, maxDistance = 0;
+        while (pathQueue.TryDequeue(out var pair)) {
+            if (++i % 1e6 == 0) 
+                Trace.WriteLine($"Status at {i / 1e6}M dequeues: {pathQueue.Count / 1000:N0}k in queue; longest path detected has length {maxDistance}; current path has visited {pair.set.Count} nodes");
+            
+            pair.set.Add(pair.position);
+            
+            if (pair.position == end) {
+                if (pair.distance > maxDistance)
+                    maxDistance = pair.distance;
+
+                continue;
+            }
+            
+            var n = 0; // reuse the hash set for the first fork
+            foreach (var neighbour in nodes[pair.position].Where(neighbour => !pair.set.Contains(neighbour.Key)))
+                pathQueue.Enqueue((neighbour.Key, pair.distance + neighbour.Value, n++ == 0 ? pair.set : new HashSet<(int x, int y)>(pair.set)));
+        }
+
+        return maxDistance + exitDistance;
     }
 
     private const string? ExampleInput = @"
