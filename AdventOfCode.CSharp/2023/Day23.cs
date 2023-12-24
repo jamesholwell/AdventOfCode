@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Text;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2023;
@@ -125,17 +126,8 @@ public class Day23 : Solver {
                 queue.Enqueue((left, pair.position, pair.position, 1));
         }
         
-        /*
-        // output a mermaid visualization of the network
-        var mermaid = new List<(int, string)>();
-        foreach (var node in nodes)
-            foreach (var neighbour in node.Value)
-                mermaid.Add((node.Key.x + node.Key.y, $"  x{node.Key.x}y{node.Key.y} --{neighbour.Value}--> x{neighbour.Key.x}y{neighbour.Key.y}"));
-        
-        Output.WriteLine("flowchart TD");
-        foreach (var mermaidLine in mermaid.OrderBy(m => m.Item1))
-            Output.WriteLine(mermaidLine.Item2);
-        */
+        // optionally, output a mermaid visualization of the network
+        //Trace.WriteLine(OutputMermaid(start, nodes));
 
         var exitDistance = 0;
         if (nodes[end].Count == 1) {
@@ -168,6 +160,30 @@ public class Day23 : Solver {
         }
 
         return maxDistance + exitDistance;
+    }
+
+    private string OutputMermaid((int x, int y) start, IReadOnlyDictionary<(int x, int y), Dictionary<(int x, int y), int>> nodes) {
+        var sb = new StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine("graph TD");
+
+        var visited = new[] { start }.ToHashSet();
+        var pairs = new HashSet<((int, int), (int, int))>();
+        var queue = new Queue<(int x, int y)>();
+        queue.Enqueue(start);
+
+        while (queue.TryDequeue(out var key)) {
+            var node = nodes[key];
+            foreach (var neighbour in node.Where(n => !pairs.Contains((key, n.Key))).OrderBy(p => p.Key.y)) {
+                sb.AppendLine($"  x{key.x}y{key.y}---|{neighbour.Value}|x{neighbour.Key.x}y{neighbour.Key.y}");
+
+                pairs.Add((neighbour.Key, key));
+                if (visited.Add(neighbour.Key))
+                    queue.Enqueue(neighbour.Key);
+            }
+        }
+
+        return sb.ToString();
     }
 
     private const string? ExampleInput = @"
