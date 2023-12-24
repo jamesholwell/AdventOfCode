@@ -1,3 +1,4 @@
+using System.Text;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp;
@@ -6,6 +7,16 @@ public class ConsoleOutputHelper : ITestOutputHelper {
     public void WriteLine(string value) => Console.WriteLine(value);
 
     public void WriteLine(string format, params object[] args) => Console.WriteLine(format, args);
+}
+
+public class StringBuilderOutputHelper : ITestOutputHelper {
+    private readonly StringBuilder buffer = new StringBuilder();
+    
+    public void WriteLine(string value) => buffer.AppendLine(value);
+
+    public void WriteLine(string format, params object[] args) => buffer.AppendFormat(format, args);
+
+    public override string ToString() => buffer.ToString();
 }
 
 public class NullOutputHelper : ITestOutputHelper {
