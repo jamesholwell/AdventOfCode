@@ -60,7 +60,7 @@ root.SetHandler(context => {
     var puzzle = context.ParseResult.GetValueForArgument(puzzleArgument);
 
     if (string.IsNullOrWhiteSpace(puzzle.Day) && DateTime.UtcNow.Month == 12)
-        puzzle.Day = $"day{DateTime.UtcNow.Day}";
+        puzzle.Day = $"day{DateTime.UtcNow.AddHours(-5).Day}";
 
     if (string.IsNullOrWhiteSpace(puzzle.Event))
         puzzle.Event = DateTime.UtcNow.AddYears(DateTime.UtcNow.Month < 12 ? -1 : 0).Year.ToString();
