@@ -145,7 +145,43 @@ public class Day24 : Solver {
             ? $"Found vz = {possibleVz.Single()}"
             : $"Found {possibleVz.Count} possible vzs {string.Join(", ", possibleVz)}");
 
-        return possibleVx.Count;
+        var trajectories = stones.SelectMany(s =>
+                Enumerable.Range(0, 10000)
+                    .Select(t => (pos: (s.px + t * s.vx, s.py + t * s.vy, s.pz + t * s.vz, t), stone: s.l)))
+            .GroupBy(pair => pair.pos)
+            .ToDictionary(pair => pair.Key, pair => pair.Select(p => p.stone).ToArray());
+
+        foreach (var vx in possibleVx.OrderByDescending(x => x)) {
+            foreach (var vy in possibleVy.OrderByDescending(y => y)) {
+                foreach (var vz in possibleVz.OrderByDescending(z => z)) {
+                    foreach (var fs in stones.OrderBy(s => vx > 0 ? s.px : -s.px)) {
+                        // imagine we hit this stone first, at t = 1
+                        var px = fs.px + fs.vx - vx;
+                        var py = fs.py + fs.vy - vy;
+                        var pz = fs.pz + fs.vz - vz;
+
+                        var remainingStones = stones.Select(s => s.l).ToHashSet();
+                        for (var t = 1; t < 10000; ++t) {
+                            var position = (px + t * vx, py + t * vy, pz + t * vz, t);
+                            if (!trajectories.TryGetValue(position, out var hits))
+                                continue;
+
+                            foreach (var hit in hits) {
+                                Output.WriteLine($"Hit {hit} at t = {t}, pos = {position.Item1}, {position.Item2}, {position.Item3}");
+                                remainingStones.Remove(hit);
+                            }
+
+                            if (remainingStones.Count == 0) {
+                                Output.WriteLine($"{px}, {py}, {pz} @ {vx}, {vy}, {vz}");
+                                return px + py + pz;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return -1;
     }
 
     private Hailstone[] Parse(string input) {
