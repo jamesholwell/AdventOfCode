@@ -65,7 +65,7 @@ public class Day24 : Solver {
         
         return accumulator;
     }
-
+    
     public override long SolvePartTwo() {
         var stones = Parse(Input);
 
@@ -95,32 +95,26 @@ public class Day24 : Solver {
         var possibleVz = Enumerable.Range(-1000, 2000).ToHashSet();
         
         // search x velocity constraints
-        //Trace.WriteLine("Searching for stones parallel in x");
         foreach (var pair in stones.GroupBy(s => s.vx).Where(g => g.Count() > 1).SelectMany(g => g.Combinations())) {
-            //Trace.WriteLine($"Stones {pair.left.l}, {pair.right.l} are parallel with vx = {pair.left.vx} and d = {pair.right.px - pair.left.px}");
-            
             var vx = pair.left.vx;
             var dx = pair.right.px - pair.left.px;
             
-            for (var i = -1000; i <= 2000; ++i)
-                if (i == vx || dx % (i - vx) != 0)
+            for (var i = -1000; i <= 1000; ++i)
+                if (i != vx && dx % (i - vx) != 0)
                     possibleVx.Remove(i);
         }
 
         Output.WriteLine(possibleVx.Count == 1
             ? $"Found vx = {possibleVx.Single()}"
-            : $"Found {possibleVx.Count} possible vxs {string.Join(", ", possibleVx)}");
+            : $"Found {possibleVz.Count} possible vxs {string.Join(", ", possibleVx)}");
 
         // search y velocity constraints
-        //Trace.WriteLine("Searching for stones parallel in y");
         foreach (var pair in stones.GroupBy(s => s.vy).Where(g => g.Count() > 1).SelectMany(g => g.Combinations())) {
-            //Trace.WriteLine($"Stones {pair.left.l}, {pair.right.l} are parallel with vy = {pair.left.vy} and d = {pair.right.py - pair.left.py}");
-            
             var vy = pair.left.vy;
             var dy = pair.right.py - pair.left.py;
             
-            for (var i = -1000; i <= 2000; ++i)
-                if (i == vy || dy % (i - vy) != 0)
+            for (var i = -1000; i <= 1000; ++i)
+                if (i != vy && dy % (i - vy) != 0)
                     possibleVy.Remove(i);
         }
 
@@ -129,15 +123,12 @@ public class Day24 : Solver {
             : $"Found {possibleVy.Count} possible vys {string.Join(", ", possibleVy)}");
 
         // search z velocity constraints
-        //Trace.WriteLine("Searching for stones parallel in z");
         foreach (var pair in stones.GroupBy(s => s.vz).Where(g => g.Count() > 1).SelectMany(g => g.Combinations())) {
-            //Trace.WriteLine($"Stones {pair.left.l}, {pair.right.l} are parallel with vz = {pair.left.vz} and d = {pair.right.pz - pair.left.pz}");
-            
             var vz = pair.left.vz;
             var dz = pair.right.pz - pair.left.pz;
             
-            for (var i = -1000; i <= 2000; ++i)
-                if (i == vz || dz % (i - vz) != 0)
+            for (var i = -1000; i <= 1000; ++i)
+                if (i != vz && dz % (i - vz) != 0)
                     possibleVz.Remove(i);
         }
 
@@ -145,33 +136,78 @@ public class Day24 : Solver {
             ? $"Found vz = {possibleVz.Single()}"
             : $"Found {possibleVz.Count} possible vzs {string.Join(", ", possibleVz)}");
 
-        var trajectories = stones.SelectMany(s =>
-                Enumerable.Range(0, 10000)
-                    .Select(t => (pos: (s.px + t * s.vx, s.py + t * s.vy, s.pz + t * s.vz, t), stone: s.l)))
-            .GroupBy(pair => pair.pos)
-            .ToDictionary(pair => pair.Key, pair => pair.Select(p => p.stone).ToArray());
+        // attempt to find the time of first impact in a small range
+        foreach (var ttfi in Enumerable.Range(0, 10000)) {
+            foreach (var vx in possibleVx.OrderByDescending(x => x)) {
+                foreach (var vy in possibleVy.OrderByDescending(y => y)) {
+                    foreach (var vz in possibleVz.OrderByDescending(z => z)) {
+                        foreach (var fs in stones.OrderBy(s => vx > 0 ? s.px : -s.px)) {
+                            var px = fs.px + ttfi * fs.vx - ttfi * vx;
+                            var py = fs.py + ttfi * fs.vy - ttfi * vy;
+                            var pz = fs.pz + ttfi * fs.vz - ttfi * vz;
 
-        foreach (var vx in possibleVx.OrderByDescending(x => x)) {
-            foreach (var vy in possibleVy.OrderByDescending(y => y)) {
-                foreach (var vz in possibleVz.OrderByDescending(z => z)) {
-                    foreach (var fs in stones.OrderBy(s => vx > 0 ? s.px : -s.px)) {
-                        // imagine we hit this stone first, at t = 1
-                        var px = fs.px + fs.vx - vx;
-                        var py = fs.py + fs.vy - vy;
-                        var pz = fs.pz + fs.vz - vz;
+                            var isGood = true;
 
-                        var remainingStones = stones.Select(s => s.l).ToHashSet();
-                        for (var t = 1; t < 10000; ++t) {
-                            var position = (px + t * vx, py + t * vy, pz + t * vz, t);
-                            if (!trajectories.TryGetValue(position, out var hits))
-                                continue;
+                            foreach (var stone in stones) {
+                                if (stone == fs)
+                                    continue;
 
-                            foreach (var hit in hits) {
-                                Output.WriteLine($"Hit {hit} at t = {t}, pos = {position.Item1}, {position.Item2}, {position.Item3}");
-                                remainingStones.Remove(hit);
+                                // calculate the intersection time - it must be integer!
+
+                                // first part: we can't catch it if it's velocity is the same as ours
+                                // sx + sv*t = px + vx*t
+                                // (sx - px) + (sv-vx)*t = 0
+                                // sx - px = 0 [mod (sv -vx)]
+
+                                if (stone.vx == vx) {
+                                    // if the velocity matches, we have to have the same start position or we will never catch it
+                                    if (stone.px != px) {
+                                        isGood = false;
+                                        break;
+                                    }
+                                }
+                                else if ((stone.px - px) % (stone.vx - vx) != 0) {
+                                    // we have to catch it at an integer time
+                                    isGood = false;
+                                    break;
+                                }
+
+                                if (stone.vy == vy) {
+                                    if (stone.py != py) {
+                                        isGood = false;
+                                        break;
+                                    }
+                                }
+                                else if ((stone.py - py) % (stone.vy - vy) != 0) {
+                                    isGood = false;
+                                    break;
+                                }
+
+                                if (stone.vz == vz) {
+                                    if (stone.pz != pz) {
+                                        isGood = false;
+                                        break;
+                                    }
+                                }
+                                else if ((stone.pz - pz) % (stone.vz - vz) != 0) {
+                                    isGood = false;
+                                    break;
+                                }
+
+                                // sx + sv*t = px + vx*t
+                                // (sx - px) = (vx - sv)*t
+                                // t = (sx - px) / (vx - sv)
+                                var tx = vx == stone.vx ? 0 : (stone.px - px) / (vx - stone.vx);
+                                var ty = vy == stone.vy ? tx : (stone.py - py) / (vy - stone.vy);
+                                var tz = vz == stone.vz ? tx : (stone.pz - pz) / (vz - stone.vz);
+
+                                if (tx < 0 || tx != ty || tx != tz) {
+                                    isGood = false;
+                                    break;
+                                }
                             }
 
-                            if (remainingStones.Count == 0) {
+                            if (isGood) {
                                 Output.WriteLine($"{px}, {py}, {pz} @ {vx}, {vy}, {vz}");
                                 return px + py + pz;
                             }
@@ -180,7 +216,7 @@ public class Day24 : Solver {
                 }
             }
         }
-        
+
         return -1;
     }
 
@@ -191,7 +227,6 @@ public class Day24 : Solver {
         for (var i = 0; i < lines.Length; ++i) {
             var parts = lines[i].Replace('@', ',').Split(',', StringSplitOptions.TrimEntries);
             stones[i] = new Hailstone {
-                l = Label(i),
                 px = long.Parse(parts[0]),
                 py = long.Parse(parts[1]),
                 pz = long.Parse(parts[2]),
@@ -204,13 +239,8 @@ public class Day24 : Solver {
         return stones;
     }
 
-    private static string Label(int i) => i > 675
-        ? new string(new[] { (char)((i - 676) / 26 + 'a'), (char)(i % 26 + 'A') })
-        : new string(new[] { (char)(i / 26 + 'A'), (char)(i % 26 + 'A') });
-    
     [SuppressMessage("ReSharper", "InconsistentNaming")] // these are their puzzle names
     private record Hailstone {
-        public string l;
         public long px;
         public long py;
         public long pz;
@@ -221,8 +251,6 @@ public class Day24 : Solver {
         public override string ToString() {
             return $"{px}, {py}, {pz} @ {vx}, {vy}, {vz}";
         }
-        
-        public static string Label(Hailstone h) => h.l;
     }
 
     private const string? ExampleInput = @"
