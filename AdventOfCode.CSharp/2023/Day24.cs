@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.Z3;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -217,7 +218,73 @@ public class Day24 : Solver {
             }
         }
 
-        return -1;
+        // oof, time to first impact is big: let a solver do the rest of the work
+        var ctx = new Context();
+        var solver = ctx.MkSolver();
+        
+        // set up the rock's position variables 
+        var mpx = ctx.MkIntConst("px");
+        var mpy = ctx.MkIntConst("py");
+        var mpz = ctx.MkIntConst("pz");
+        
+        // assume we found single solutions to the potential velocities
+        var rockvx = possibleVx.Single();
+        var rockvy = possibleVy.Single();
+        var rockvz = possibleVz.Single();
+        
+        // and set them up as constants in the model
+        var cvx = ctx.MkInt(rockvx);
+        var cvy = ctx.MkInt(rockvy);
+        var cvz = ctx.MkInt(rockvz);
+     
+        // For each iteration, we will add 3 new equations and one new condition to the solver.
+        // We want to find 9 variables (x, y, z, t0, t1, t2) that satisfy all the equations, so a system of 9 equations is enough.
+        for (var i = 0; i < 2; i++) {
+            var stone = stones[i];
+            
+            // time to impact variable
+            var mt = ctx.MkIntConst($"t{i}");
+
+            // set up the stone position constants
+            var mspx = ctx.MkInt(stone.px);
+            var mspy = ctx.MkInt(stone.py);
+            var mspz = ctx.MkInt(stone.pz);
+            
+            // set up the stone velocity constants
+            var msvx = ctx.MkInt(stone.vx);
+            var msvy = ctx.MkInt(stone.vy);
+            var msvz = ctx.MkInt(stone.vz);
+            
+            // set up the rock/time equation
+            var mRockPositionEqX = ctx.MkAdd(mpx, ctx.MkMul(mt, cvx)); // rock.px + t * rock.vx
+            var mRockPositionEqY = ctx.MkAdd(mpy, ctx.MkMul(mt, cvy)); // rock.py + t * rock.vy
+            var mRockPositionEqZ = ctx.MkAdd(mpz, ctx.MkMul(mt, cvz)); // rock.pz + t * rock.vz
+     
+            // set up the stone/time equation
+            var mStonePositionEqX = ctx.MkAdd(mspx, ctx.MkMul(mt, msvx)); // stone.px + t * stone.vx
+            var mStonePositionEqY = ctx.MkAdd(mspy, ctx.MkMul(mt, msvy)); // stone.py + t * stone.vy
+            var mStonePositionEqZ = ctx.MkAdd(mspz, ctx.MkMul(mt, msvz)); // stone.pz + t * stone.vz
+     
+            // constrain to positive time
+            solver.Add(mt >= 0);
+            
+            // constrain that positions are equal at the time of impact
+            solver.Add(ctx.MkEq(mRockPositionEqX, mStonePositionEqX)); // x + t * vx = px + t * pvx
+            solver.Add(ctx.MkEq(mRockPositionEqY, mStonePositionEqY)); // y + t * vy = py + t * pvy
+            solver.Add(ctx.MkEq(mRockPositionEqZ, mStonePositionEqZ)); // z + t * vz = pz + t * pvz
+        }
+     
+        solver.Check();
+        var model = solver.Model;
+     
+        var rockpx = Convert.ToInt64(model.Eval(mpx).ToString());
+        var rockpy = Convert.ToInt64(model.Eval(mpy).ToString());
+        var rockpz = Convert.ToInt64(model.Eval(mpz).ToString());
+     
+        Output.WriteLine($"p = {rockpx}, {rockpy}, {rockpz}");
+        Output.WriteLine($"v = {rockvx}, {rockvy}, {rockvz}");
+        
+        return rockpx + rockpy + rockpz;
     }
 
     private Hailstone[] Parse(string input) {
