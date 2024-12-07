@@ -1,6 +1,9 @@
-﻿namespace AdventOfCode.CSharp;
+﻿// ReSharper disable MemberCanBePrivate.Global - helpers are used downstream
+// ReSharper disable UnusedMember.Global - helpers are used downstream
+// ReSharper disable UnusedType.Global - helpers are used downstream
+namespace AdventOfCode.Core;
 
-public static class Maths {
+public static class Mathematics {
     // ReSharper disable once InconsistentNaming - this is the mathematical name
     public static long lcm(long a, long b) {
         return (a / gcf(a, b)) * b;
@@ -17,7 +20,9 @@ public static class Maths {
         return a;
     }
 
+    // ReSharper disable once InconsistentNaming - this is the mathematical name
     public static int mod(int a, int n) => wrap(a, n);
-    
+
+    // ReSharper disable once InconsistentNaming - this is the mathematical name
     public static int wrap(int a, int n) => ((a % n) + n) % n;
 }

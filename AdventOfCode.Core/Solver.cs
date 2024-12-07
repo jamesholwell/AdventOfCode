@@ -1,3 +1,4 @@
+using AdventOfCode.Core.Output;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.Core;
