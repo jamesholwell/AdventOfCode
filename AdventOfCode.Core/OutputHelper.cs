@@ -1,7 +1,19 @@
 using System.Text;
 using Xunit.Abstractions;
 
-namespace AdventOfCode.CSharp;
+namespace AdventOfCode.Core;
+
+public class TestOutputHelper : ITestOutputHelper {
+    private readonly ITestOutputHelper? outputHelper;
+
+    public TestOutputHelper(ITestOutputHelper? outputHelper) {
+        this.outputHelper = outputHelper;
+    }
+
+    public void WriteLine(string value) => outputHelper?.WriteLine(value);
+
+    public void WriteLine(string format, params object[] args) => outputHelper?.WriteLine(format, args);
+}
 
 public class ConsoleOutputHelper : ITestOutputHelper {
     public void WriteLine(string value) => Console.WriteLine(value);
@@ -11,18 +23,12 @@ public class ConsoleOutputHelper : ITestOutputHelper {
 
 public class StringBuilderOutputHelper : ITestOutputHelper {
     private readonly StringBuilder buffer = new StringBuilder();
-    
+
     public void WriteLine(string value) => buffer.AppendLine(value);
 
     public void WriteLine(string format, params object[] args) => buffer.AppendFormat(format, args);
 
     public override string ToString() => buffer.ToString();
-}
-
-public class NullOutputHelper : ITestOutputHelper {
-    public void WriteLine(string value) { return; }
-
-    public void WriteLine(string format, params object[] args) { return; }
 }
 
 public static class OutputHelperExtensions {
@@ -43,5 +49,5 @@ public static class OutputHelperExtensions {
         outputHelper.WriteLine(new string(value));
 
     public static void WriteLine(this ITestOutputHelper outputHelper, object value) =>
-        outputHelper.WriteLine(value.ToString());
+        outputHelper.WriteLine(value?.ToString() ?? "<null string>");
 }
