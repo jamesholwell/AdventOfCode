@@ -1,6 +1,7 @@
 using System.Reflection;
+using AdventOfCode.Core;
 
-namespace AdventOfCode.Core;
+namespace AdventOfCode.Infrastructure;
 
 public class SolverFactory {
     private readonly IDictionary<string, Type> solvers;
@@ -49,9 +50,11 @@ public class SolverFactory {
             var @event = type.Namespace == null
                 ? string.Empty
                 : type.Namespace[(type.Namespace.LastIndexOf('.') + 1)..].TrimStart('_');
-            
+
             var solverAttribute = type.GetCustomAttribute<SolverAttribute>();
-            solvers[@event.ToLowerInvariant() + "-" + (solverAttribute?.Key ?? type.Name.ToLowerInvariant() + "-" + prefix)] = type;
+            solvers[
+                @event.ToLowerInvariant() + "-" +
+                (solverAttribute?.Key ?? type.Name.ToLowerInvariant() + "-" + prefix)] = type;
         }
 
         return this;
