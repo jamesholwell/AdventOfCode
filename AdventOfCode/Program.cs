@@ -1,6 +1,7 @@
 ﻿using System.CommandLine;
 using AdventOfCode.Core;
 using AdventOfCode.Functions;
+using AdventOfCode.Infrastructure;
 
 var factory =
     new SolverFactory()
