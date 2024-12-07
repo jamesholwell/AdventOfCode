@@ -1,18 +1,19 @@
-﻿namespace AdventOfCode.CSharp;
+﻿// ReSharper disable UnusedType.Global - helpers are used downstream
+// ReSharper disable UnusedMember.Global - helpers are used downstream
+namespace AdventOfCode.Core.Grid;
 
-public class PointGrid<T> where T : struct {
+public class IndirectGrid<T> where T : struct {
     private readonly char[,] grid;
     private readonly int height;
-    private readonly T[] points;
     private readonly int width;
     private readonly Func<T, int> xf;
     private readonly int xOffset;
     private readonly Func<T, int> yf;
     private readonly int yOffset;
 
-    public PointGrid(IEnumerable<T> enumerable, Func<T, int> xAccessor, Func<T, int> yAccessor,
+    public IndirectGrid(IEnumerable<T> enumerable, Func<T, int> xAccessor, Func<T, int> yAccessor,
         Func<T, char>? valueAccessor = null, char defaultValue = ' ') {
-        points = enumerable as T[] ?? enumerable.ToArray();
+        var points = enumerable as T[] ?? enumerable.ToArray();
         xf = xAccessor;
         yf = yAccessor;
 

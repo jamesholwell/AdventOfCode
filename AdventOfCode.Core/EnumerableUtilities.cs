@@ -1,4 +1,6 @@
-﻿namespace AdventOfCode.CSharp;
+﻿// ReSharper disable UnusedMember.Global - helpers are used downstream
+// ReSharper disable UnusedType.Global - helpers are used downstream
+namespace AdventOfCode.Core;
 
 public static class EnumerableUtilities {
     public static IEnumerable<Tuple<T, T>> Pairwise<T>(this IEnumerable<T> enumerable) {
