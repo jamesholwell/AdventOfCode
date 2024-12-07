@@ -1,7 +1,7 @@
 using System.Text;
 using Xunit.Abstractions;
 
-namespace AdventOfCode.Core;
+namespace AdventOfCode.Core.Output;
 
 public class TestOutputHelper : ITestOutputHelper {
     private readonly ITestOutputHelper? outputHelper;
