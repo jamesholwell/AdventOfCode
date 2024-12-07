@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 
-namespace AdventOfCode.Core;
+namespace AdventOfCode.Infrastructure;
 
 public class AmbiguousSolverException : Exception {
     public AmbiguousSolverException(string[] candidates)

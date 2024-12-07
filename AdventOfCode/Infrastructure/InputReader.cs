@@ -2,9 +2,9 @@ using System.CommandLine;
 using System.Text.RegularExpressions;
 using AdventOfCode.Core;
 
-namespace AdventOfCode;
+namespace AdventOfCode.Infrastructure;
 
-internal static class Utilities {
+internal static class InputReader {
     private static readonly Regex FilenameSanitizer = new("[^a-z0-9]", RegexOptions.IgnoreCase);
 
     public static bool TryReadInput(PuzzleSpecification puzzle, out string input, IConsole console) {

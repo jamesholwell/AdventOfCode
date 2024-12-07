@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Diagnostics;
 using System.Reflection;
 using AdventOfCode.Core;
+using AdventOfCode.Infrastructure;
 
 namespace AdventOfCode.Functions;
 
@@ -18,7 +19,7 @@ internal class RunSolver {
     }
 
     public void Execute(PuzzleSpecification puzzle) {
-        if (!Utilities.TryReadInput(puzzle, out var input, console)) {
+        if (!InputReader.TryReadInput(puzzle, out var input, console)) {
             Console.ForegroundColor = ConsoleColor.DarkRed;
             console.WriteLine("Unable to read puzzle input");
             Console.ResetColor();

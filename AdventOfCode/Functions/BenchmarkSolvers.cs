@@ -1,6 +1,7 @@
 using AdventOfCode.Core;
 using System.CommandLine;
 using System.Diagnostics;
+using AdventOfCode.Infrastructure;
 
 namespace AdventOfCode.Functions;
 
@@ -15,7 +16,7 @@ internal class BenchmarkSolvers {
     }
 
     public void Execute(PuzzleSpecification puzzle) {
-        if (!Utilities.TryReadInput(puzzle, out var input, console))
+        if (!InputReader.TryReadInput(puzzle, out var input, console))
             return;
 
         var solvers = factory.CreateAll(puzzle.Day, puzzle.Event, input);
