@@ -1,9 +1,9 @@
-namespace AdventOfCode.Core;
+namespace AdventOfCode.Infrastructure;
 
 class SolverComparer : IComparer<string> {
     public int Compare(string? x, string? y) {
         if (x == null || y == null) return 0;
-        
+
         var defaultComparison = string.Compare(x, y);
 
         var xparts = x.Split('-', 3);
@@ -16,13 +16,13 @@ class SolverComparer : IComparer<string> {
 
         if (xevent > yevent) return 1;
         if (xevent < yevent) return -1;
-        
+
         if (!int.TryParse(xparts[1].Substring(3), out var xday) || !int.TryParse(yparts[1].Substring(3), out var yday))
             return defaultComparison;
 
         if (xday > yday) return 1;
         if (xday < yday) return -1;
-        
+
         return string.Compare(xparts[2], yparts[2]);
     }
 }
