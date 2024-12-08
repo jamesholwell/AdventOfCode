@@ -4,16 +4,18 @@ using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp;
 
-public class TemplateSolver : Solver {
-    public TemplateSolver(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
-
+public class TemplateSolver(string? input = null, ITestOutputHelper? outputHelper = null)
+    : Solver(input, outputHelper) {
     protected override long SolvePartOne() => 0;
 
     protected override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
 
-    private const string? ExampleInput = @"
-foo
-";
+    private const string? ExampleInput = 
+        """
+        
+        <snip>
+        
+        """;
 
     [Fact]
     public void SolvesPartOneExample() {
