@@ -5,7 +5,7 @@ using AdventOfCode.Core;
 namespace AdventOfCode.Infrastructure;
 
 internal static class InputReader {
-    private static readonly Regex FilenameSanitizer = new("[^a-z0-9]", RegexOptions.IgnoreCase);
+    internal static readonly Regex FilenameSanitizer = new("[^a-z0-9]", RegexOptions.IgnoreCase);
 
     public static bool TryReadInput(PuzzleSpecification puzzle, out string input, IConsole console) {
         if (string.IsNullOrWhiteSpace(puzzle.Event) || string.IsNullOrWhiteSpace(puzzle.Day)) {
