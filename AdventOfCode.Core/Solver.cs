@@ -11,7 +11,10 @@ public interface ISolver {
 public abstract class Solver<T> : ISolver {
     protected Solver(string? input = null, ITestOutputHelper? outputHelper = null) {
         Input = input ?? string.Empty;
-        Trace = Output = new TestOutputHelper(outputHelper);
+        Output = new TestOutputHelper(outputHelper);
+        
+        // when we're instantiated in tests, Trace is on, but suppress output on the command line 
+        Trace = (outputHelper is ConsoleOutputHelper) ? new NullOutputHelper() : Output;
     }
 
     // ReSharper disable once UnusedAutoPropertyAccessor.Global - used by downstream classes
