@@ -15,6 +15,12 @@ public class TestOutputHelper : ITestOutputHelper {
     public void WriteLine(string format, params object[] args) => outputHelper?.WriteLine(format, args);
 }
 
+public class NullOutputHelper : ITestOutputHelper {
+    public void WriteLine(string value) { }
+
+    public void WriteLine(string format, params object[] args) { }
+}
+
 public class ConsoleOutputHelper : ITestOutputHelper {
     public void WriteLine(string value) => Console.WriteLine(value);
 
