@@ -43,6 +43,10 @@ var puzzleArgument =
             return spec;
         }) { Arity = ArgumentArity.ZeroOrMore };
 
+var startArgument = new Option<bool>(
+    "--start",
+    "Initialize a new empty solver in the today project");
+
 var traceArgument = new Option<bool>(
     "--trace",
     "Output trace information");
@@ -55,7 +59,7 @@ var benchmarkArgument = new Option<bool>(
     "--bench",
     "Benchmark solver performance");
 
-var root = new RootCommand { puzzleArgument, traceArgument, listArgument, benchmarkArgument };
+var root = new RootCommand { puzzleArgument, startArgument, traceArgument, listArgument, benchmarkArgument };
 
 root.SetHandler(context => {
     var puzzle = context.ParseResult.GetValueForArgument(puzzleArgument);
@@ -66,6 +70,12 @@ root.SetHandler(context => {
     if (string.IsNullOrWhiteSpace(puzzle.Event))
         puzzle.Event = DateTime.UtcNow.AddYears(DateTime.UtcNow.Month < 12 ? -1 : 0).Year.ToString();
 
+    var isStarting = context.ParseResult.GetValueForOption(startArgument);
+    if (isStarting) {
+        new CreateSolver(context.Console).Execute(puzzle);
+        return;
+    }
+    
     var isListing = context.ParseResult.GetValueForOption(listArgument);
     if (isListing ||
         string.IsNullOrWhiteSpace(puzzle.Event) ||
