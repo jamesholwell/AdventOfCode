@@ -11,4 +11,5 @@ public static class Shared {
 
     public static int[] SplitInt(this string s) => Shared.Split(s).Select(int.Parse).ToArray();
 
+    public static int[] SplitInt(this string s, string separator) => s.SplitBy(separator).Select(int.Parse).ToArray();
 }
