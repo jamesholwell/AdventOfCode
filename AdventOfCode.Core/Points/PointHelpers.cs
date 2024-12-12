@@ -5,6 +5,14 @@
 namespace AdventOfCode.Core.Points;
 
 public static class PointHelpers {
+    public static (int x, int y) Up(this (int x, int y) coordinate) => (coordinate.x, coordinate.y - 1);
+
+    public static (int x, int y) Right(this (int x, int y) coordinate) => (coordinate.x + 1, coordinate.y);
+
+    public static (int x, int y) Down(this (int x, int y) coordinate) => (coordinate.x, coordinate.y + 1);
+
+    public static (int x, int y) Left(this (int x, int y) coordinate) => (coordinate.x - 1, coordinate.y);
+
     public static IEnumerable<(int x, int y)> SplitCoordinates(this string s, Func<char, bool> predicate) {
         var rows = Shared.Split(s);
         var height = rows.Length;
