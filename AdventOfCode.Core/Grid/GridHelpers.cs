@@ -35,6 +35,28 @@ public static class GridHelpers {
 
     public static int Width<T>(this T[,] array) => array.GetLength(1);
 
+    public static T At<T>(this T[,] array, (int x, int y) index) => array[index.y, index.x];
+
+    public static T At<T>(this T[,] array, int x, int y) => array[y, x];
+    
+    public static T? MaybeAt<T>(this T[,] array, (int x, int y) index) => 
+        index.y < 0 || index.y >= array.GetLength(0) ||
+        index.x < 0 || index.x >= array.GetLength(1) ? default : 
+        array[index.y, index.x];
+
+    public static T? MaybeAt<T>(this T[,] array, int x, int y) => 
+        y < 0 || y >= array.GetLength(0) ||
+        x < 0 || x >= array.GetLength(1) ? default : 
+            array[y, x];
+
+    public static bool Contains<T>(this T[,] array, (int x, int y) index) => 
+        0 <= index.y && index.y < array.Height() &&
+        0 <= index.x && index.x < array.Width();
+
+    public static bool Contains<T>(this T[,] array, int x, int y) => 
+        0 <= y && y < array.Height() &&
+        0 <= x && x < array.Width();
+
     public static void Initialize<T>(this T[,] array, T value) {
         var width = array.Width();
         var height = array.Height();
