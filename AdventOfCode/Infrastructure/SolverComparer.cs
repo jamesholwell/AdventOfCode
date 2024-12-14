@@ -1,28 +1,31 @@
 namespace AdventOfCode.Infrastructure;
 
-class SolverComparer : IComparer<string> {
+internal class SolverComparer : IComparer<string> {
     public int Compare(string? x, string? y) {
         if (x == null || y == null) return 0;
 
-        var defaultComparison = string.Compare(x, y);
+        var defaultComparison = string.CompareOrdinal(x, y);
 
-        var xparts = x.Split('-', 3);
-        var yparts = y.Split('-', 3);
-        if (xparts.Length < 2 || yparts.Length < 2 || xparts[1][..3] != "day" || yparts[1][..3] != "day")
+        var xParts = x.Split('-', 3);
+        var yParts = y.Split('-', 3);
+        if (xParts.Length < 2 || yParts.Length < 2 || xParts[1][..3] != "day" || yParts[1][..3] != "day")
             return defaultComparison;
 
-        if (!int.TryParse(xparts[0], out var xevent) || !int.TryParse(yparts[0], out var yevent))
+        if (!int.TryParse(xParts[0], out var xEvent) || !int.TryParse(yParts[0], out var yEvent))
             return defaultComparison;
 
-        if (xevent > yevent) return 1;
-        if (xevent < yevent) return -1;
+        if (xEvent > yEvent) return 1;
+        if (xEvent < yEvent) return -1;
 
-        if (!int.TryParse(xparts[1].Substring(3), out var xday) || !int.TryParse(yparts[1].Substring(3), out var yday))
+        if (!int.TryParse(xParts[1].AsSpan(3), out var xDay) || !int.TryParse(yParts[1].AsSpan(3), out var yDay))
             return defaultComparison;
 
-        if (xday > yday) return 1;
-        if (xday < yday) return -1;
+        if (xDay > yDay) return 1;
+        if (xDay < yDay) return -1;
 
-        return string.Compare(xparts[2], yparts[2]);
+        var xSolver = xParts.Length < 3 ? string.Empty : xParts[2];
+        var ySolver = yParts.Length < 3 ? string.Empty : yParts[2];
+        
+        return string.CompareOrdinal(xSolver, ySolver);
     }
 }
