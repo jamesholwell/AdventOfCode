@@ -5,7 +5,7 @@ using AdventOfCode.Infrastructure;
 
 var factory =
     new SolverFactory()
-        .AddAssembly<AdventOfCode.CSharp.TemplateSolver>("csharp")
+        .AddAssembly<AdventOfCode.CSharp.TemplateSolver>(string.Empty)
         .AddAssembly<AdventOfCode.FSharp.TemplateSolver>("fsharp");
 
 var puzzleArgument =
