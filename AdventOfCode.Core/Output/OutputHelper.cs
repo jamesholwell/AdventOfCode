@@ -3,18 +3,6 @@ using Xunit.Abstractions;
 
 namespace AdventOfCode.Core.Output;
 
-public class TestOutputHelper : ITestOutputHelper {
-    private readonly ITestOutputHelper? outputHelper;
-
-    public TestOutputHelper(ITestOutputHelper? outputHelper) {
-        this.outputHelper = outputHelper;
-    }
-
-    public void WriteLine(string value) => outputHelper?.WriteLine(value);
-
-    public void WriteLine(string format, params object[] args) => outputHelper?.WriteLine(format, args);
-}
-
 public class NullOutputHelper : ITestOutputHelper {
     public void WriteLine(string value) { }
 
@@ -27,8 +15,14 @@ public class ConsoleOutputHelper : ITestOutputHelper {
     public void WriteLine(string format, params object[] args) => Console.WriteLine(format, args);
 }
 
+public class TracingConsoleOutputHelper : ITestOutputHelper {
+    public void WriteLine(string value) => Console.WriteLine(value);
+
+    public void WriteLine(string format, params object[] args) => Console.WriteLine(format, args);
+}
+
 public class StringBuilderOutputHelper : ITestOutputHelper {
-    private readonly StringBuilder buffer = new StringBuilder();
+    private readonly StringBuilder buffer = new();
 
     public void WriteLine(string value) => buffer.AppendLine(value);
 
@@ -54,6 +48,6 @@ public static class OutputHelperExtensions {
     public static void WriteLine(this ITestOutputHelper outputHelper, char[] value) =>
         outputHelper.WriteLine(new string(value));
 
-    public static void WriteLine(this ITestOutputHelper outputHelper, object value) =>
+    public static void WriteLine(this ITestOutputHelper outputHelper, object? value) =>
         outputHelper.WriteLine(value?.ToString() ?? "<null string>");
 }
