@@ -1,38 +1,36 @@
 using System.Reflection;
 using AdventOfCode.Core;
+using Xunit.Abstractions;
 
 namespace AdventOfCode.Infrastructure;
 
 public class SolverFactory {
-    private readonly IDictionary<string, Type> solvers;
+    private readonly IDictionary<string, Type> solvers = new SortedDictionary<string, Type>(new SolverComparer());
 
-    public SolverFactory() {
-        solvers = new SortedDictionary<string, Type>(new SolverComparer());
-    }
-
-    public ISolver? Create(string day, string @event, string input, string? solver = null) {
+    public ISolver? Create(string day, string @event, string input, string? solver = null, ITestOutputHelper? output = null) {
         var prefix = $"{@event.ToLowerInvariant()}-{day.ToLowerInvariant()}-{solver}";
         var candidates = solvers.Keys.Where(k => k.StartsWith(prefix)).ToArray();
 
         return candidates.Length switch {
-            1 => Instantiate(solvers[candidates.Single()], input),
+            1 => Instantiate(solvers[candidates.Single()], input, output),
             0 => null,
             _ => throw new AmbiguousSolverException(candidates)
         };
     }
 
-    public IDictionary<string, ISolver> CreateAll(string day, string @event, string input) {
+    public IDictionary<string, ISolver> CreateAll(string day, string @event, string input, ITestOutputHelper? output = null) {
         return solvers.Keys.Where(k => k.StartsWith($"{@event.ToLowerInvariant()}-{day.ToLowerInvariant()}-"))
-            .ToDictionary(k => k, k => Instantiate(solvers[k], input));
+            .ToDictionary(k => k, k => Instantiate(solvers[k], input, output));
     }
 
-    private ISolver Instantiate(Type solver, string input) {
+    private static ISolver Instantiate(Type solver, string input, ITestOutputHelper? output = null) {
         var constructor = solver.GetConstructors().First();
 
         var parameters =
             constructor.GetParameters()
-                .Select(parameter => parameter.ParameterType == typeof(string) ? input : null)
-                .Cast<object?>()
+                .Select(parameter => 
+                    parameter.ParameterType == typeof(string) ? (object)input :
+                    parameter.ParameterType == typeof(ITestOutputHelper) ? output : null)
                 .ToArray();
 
         return (ISolver)constructor.Invoke(parameters);
