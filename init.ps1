@@ -15,5 +15,5 @@ function global:buildaoc {
 
 function global:runaoc {
     Param([parameter(ValueFromRemainingArguments = $true)][string[]]$args)
-    dotnet .\AdventOfCode\bin\Release\net6.0\AdventOfCode.dll @args
+    dotnet .\AdventOfCode\bin\Release\net8.0\AdventOfCode.dll @args
 }
