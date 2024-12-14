@@ -1,15 +1,21 @@
-﻿
+﻿using System.Reflection;
 using System.Text.RegularExpressions;
 using AdventOfCode.Core;
 using AdventOfCode.Core.Output;
 using Xunit.Abstractions;
 
 // locate the solver class
-var solvers = typeof(Program).Assembly.GetTypes().Where(t => typeof(ISolver).IsAssignableFrom(t) && !t.IsAbstract).ToArray();
+var solvers =
+    Assembly
+        .GetExecutingAssembly()
+        .GetTypes()
+        .Where(t => typeof(ISolver).IsAssignableFrom(t) && !t.IsAbstract)
+        .ToArray();
+
 if (solvers.Length != 1) {
     Console.ForegroundColor = ConsoleColor.DarkRed;
     Console.WriteLine(solvers.Length == 0 ? "No solver detected" : "More than one solver detected");
-    foreach (var candidate in solvers) 
+    foreach (var candidate in solvers)
         Console.WriteLine(candidate.FullName);
     Console.ResetColor();
     return;
@@ -54,4 +60,3 @@ var output =
         : solver.SolvePartOne();
 
 Console.WriteLine(output);
-    
