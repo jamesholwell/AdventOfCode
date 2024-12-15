@@ -29,7 +29,7 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
             .Replace(".", "..")
             .Replace("@", "@.");
     
-    private static (int x, int y) AttemptMove((int x, int y) position, Directions direction, char[,] grid) {
+    private static (int x, int y) AttemptMove((int x, int y) position, Directions direction, char[,] grid, HashSet<(int x, int y)> updates) {
         (int x, int y) vector = direction switch {
             Directions.North => (0, -1),
             Directions.East => (1, 0),
@@ -57,18 +57,23 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
         // now backtrack
         while (shunt != position) {
             var nextShunt = (x: shunt.x - vector.x, y: shunt.y - vector.y);
+            
             grid[shunt.y, shunt.x] = grid.At(nextShunt);
+            updates.Add((shunt.x, shunt.y));
+            
             shunt = nextShunt;
         }
 
         grid[position.y, position.x] = '.';
+        updates.Add(position);
+        
         return newPosition;
     }
     
-    private static (int x, int y) AttemptDoubleWidthMove((int x, int y) position, Directions direction, char[,] grid) {
+    private static (int x, int y) AttemptDoubleWidthMove((int x, int y) position, Directions direction, char[,] grid, HashSet<(int x, int y)> updates) {
         // left and right moves behave like part 1
         if (direction is Directions.East or Directions.West)
-            return AttemptMove(position, direction, grid);
+            return AttemptMove(position, direction, grid, updates);
         
         var dy = direction switch {
             Directions.North => -1,
@@ -113,7 +118,10 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
         // now backtrack
         foreach (var shunt in shunts.OrderByDescending(s => s.y * dy)) {
             grid[shunt.y + dy, shunt.x] = grid.At(shunt);
+            updates.Add((shunt.x, shunt.y + dy));
+            
             grid[shunt.y, shunt.x] = '.';
+            updates.Add((shunt.x, shunt.y));
         }
         
         return position with { y = position.y + dy };
@@ -124,9 +132,10 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
     protected override long SolvePartOne() {
         var (grid, moves) = Parse(Input);
         var robotPosition = grid.Find('@');
+        var updates = new HashSet<(int x, int y)>();
         
         foreach (var move in moves) 
-            robotPosition = AttemptMove(robotPosition, move, grid);
+            robotPosition = AttemptMove(robotPosition, move, grid, updates);
             
         Trace.WriteLine(grid.Render());
         return SumGps(grid);
@@ -135,19 +144,42 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
     protected override long SolvePartTwo() {
         var (grid, moves) = Parse(Expand(Input));
         var robotPosition = grid.Find('@');
-
-        Trace.WriteLine("Initial state:");
-        Trace.WriteLine(grid.Render());
+        var updates = new HashSet<(int x, int y)>();
+        var i = 0;
         
-        foreach (var move in moves) {
-            robotPosition = AttemptDoubleWidthMove(robotPosition, move, grid);
-            
-            Trace.WriteLine(string.Empty);
-            Trace.WriteLine($"Move {directionChars[(int)move]}:");
-            Trace.WriteLine(grid.Render());
+        try {
+            Console.CursorVisible = false;
+            Console.Clear();
+            Console.SetCursorPosition(0, 0);
+            Console.WriteLine("Move X:");
+            Console.WriteLine(grid.Render());
+
+            foreach (var move in moves) {
+                updates.Clear();
+                robotPosition = AttemptDoubleWidthMove(robotPosition, move, grid, updates);
+
+                if (i++ % 10 == 0) {
+                    Console.SetCursorPosition(0, 1);
+                    Console.WriteLine(grid.Render());
+                }
+                else {
+                    foreach (var coordinate in updates) {
+                        Console.SetCursorPosition(coordinate.x, 1 + coordinate.y);
+                        Console.Write(grid.At(coordinate));
+                    }
+                }
+
+                if (updates.Count > 2)
+                    Thread.Sleep(1);
+            }
+        }
+        finally {
+            Console.SetCursorPosition(0, grid.Height());
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.CursorVisible = true;
         }
 
-        Trace.WriteLine(grid.Render());
         return SumGps(grid);
     }
     
@@ -252,9 +284,10 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
         
         Output.WriteLine("Initial state:");
         Output.WriteLine(grid.Render());
+        var updates = new HashSet<(int x, int y)>();
 
         foreach (var move in moves) {
-            robotPosition = AttemptMove(robotPosition, move, grid);
+            robotPosition = AttemptMove(robotPosition, move, grid, updates);
             
             Output.WriteLine(string.Empty);
             Output.WriteLine($"Move {directionChars[(int)move]}:");
@@ -325,9 +358,10 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
         
         Output.WriteLine("Initial state:");
         Output.WriteLine(grid.Render());
+        var updates = new HashSet<(int x, int y)>();
 
         foreach (var move in moves) {
-            robotPosition = AttemptDoubleWidthMove(robotPosition, move, grid);
+            robotPosition = AttemptDoubleWidthMove(robotPosition, move, grid, updates);
             
             Output.WriteLine(string.Empty);
             Output.WriteLine($"Move {directionChars[(int)move]}:");
@@ -366,8 +400,9 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
         
         var grid = trickyInput.SplitGrid();
         var robotPosition = grid.Find('@');
+        var updates = new HashSet<(int x, int y)>();
         
-        robotPosition = AttemptDoubleWidthMove(robotPosition, Directions.South, grid);
+        robotPosition = AttemptDoubleWidthMove(robotPosition, Directions.South, grid, updates);
         
         Output.WriteLine(grid.Render());
         
