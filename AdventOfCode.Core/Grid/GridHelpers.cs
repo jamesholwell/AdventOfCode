@@ -106,6 +106,29 @@ public static class GridHelpers {
         return buffer.ToString();
     }
 
+    public static IEnumerable<(int x, int y)> Where<T>(this T[,] array, Func<T, bool> predicate) {
+        var width = array.Width();
+        var height = array.Height();
+
+        for (var y = 0; y < height; ++y)
+        for (var x = 0; x < width; ++x)
+            if (predicate(array[y, x]))
+                yield return (x, y);
+    }
+    
+    public static (int x, int y) Find<T>(this T[,] array, T element) {
+        if (element == null) throw new ArgumentNullException(nameof(element));
+        var width = array.Width();
+        var height = array.Height();
+
+        for (var y = 0; y < height; ++y)
+        for (var x = 0; x < width; ++x)
+            if (element.Equals(array[y, x]))
+                return (x, y);
+
+        throw new InvalidOperationException("Predicate did not match any element");
+    }
+    
     public static TResult[,] Map<T, TResult>(this T[,] array, Func<T, TResult> selector) {
         return Map(array, (_, _, t) => selector(t));
     }
