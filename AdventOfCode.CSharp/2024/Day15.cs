@@ -23,6 +23,12 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
         return (grid, moves);
     }
 
+    private static string Expand(string? input) => input == null ? string.Empty : 
+        input.Replace("#", "##")
+            .Replace("O", "[]")
+            .Replace(".", "..")
+            .Replace("@", "@.");
+    
     private static (int x, int y) AttemptMove((int x, int y) position, Directions direction, char[,] grid) {
         (int x, int y) vector = direction switch {
             Directions.North => (0, -1),
@@ -59,7 +65,61 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
         return newPosition;
     }
     
-    private static int SumGps(char[,] grid) => grid.Flatten((x, y, c) => c != 'O' ? 0 : 100 * y + x).Sum();
+    private static (int x, int y) AttemptDoubleWidthMove((int x, int y) position, Directions direction, char[,] grid) {
+        // left and right moves behave like part 1
+        if (direction is Directions.East or Directions.West)
+            return AttemptMove(position, direction, grid);
+        
+        var dy = direction switch {
+            Directions.North => -1,
+            Directions.South => 1,
+            _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null)
+        };
+
+        var shunts = new List<(int x, int y)>();
+        var shuntFront = new HashSet<(int x, int y)> { position };
+
+        while (true) {
+            // move the shunt front forwards
+            var nextPositions = shuntFront.Select(p => p with { y = p.y + dy }).ToArray();
+            
+            // look for obstructions
+            if (nextPositions.Any(np => grid.At(np) == '#')) 
+                return position;
+
+            // path is not obstructed, advance
+            shunts.AddRange(shuntFront);
+            shuntFront.Clear();
+            
+            // if path is completely clear, we are done
+            if (nextPositions.All(np => grid.At(np) == '.'))
+                break;
+            
+            // otherwise we need to build the next shunt front
+            foreach (var nextPosition in nextPositions) {
+                if (grid.At(nextPosition) == '.')
+                    continue;
+                
+                shuntFront.Add(nextPosition);
+                
+                // check for half-boxes
+                if (grid.At(nextPosition) == ']')
+                    shuntFront.Add(nextPosition with { x = nextPosition.x - 1 });
+                else if (grid.At(nextPosition) == '[')
+                    shuntFront.Add(nextPosition with { x = nextPosition.x + 1 });
+            }
+        }
+
+        // now backtrack
+        foreach (var shunt in shunts.OrderByDescending(s => s.y * dy)) {
+            grid[shunt.y + dy, shunt.x] = grid.At(shunt);
+            grid[shunt.y, shunt.x] = '.';
+        }
+        
+        return position with { y = position.y + dy };
+    }
+
+    private static int SumGps(char[,] grid) => grid.Flatten((x, y, c) => c != 'O' && c != '[' ? 0 : 100 * y + x).Sum();
 
     protected override long SolvePartOne() {
         var (grid, moves) = Parse(Input);
@@ -72,8 +132,25 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
         return SumGps(grid);
     }
 
-    protected override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    protected override long SolvePartTwo() {
+        var (grid, moves) = Parse(Expand(Input));
+        var robotPosition = grid.Find('@');
 
+        Trace.WriteLine("Initial state:");
+        Trace.WriteLine(grid.Render());
+        
+        foreach (var move in moves) {
+            robotPosition = AttemptDoubleWidthMove(robotPosition, move, grid);
+            
+            Trace.WriteLine(string.Empty);
+            Trace.WriteLine($"Move {directionChars[(int)move]}:");
+            Trace.WriteLine(grid.Render());
+        }
+
+        Trace.WriteLine(grid.Render());
+        return SumGps(grid);
+    }
+    
     private readonly char[] directionChars = ['^', '>', 'v', '<'];
     
     private enum Directions {
@@ -82,21 +159,7 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
         South,
         West
     }
-
-    private const string SimpleExampleInput =
-        """
-        ########
-        #..O.O.#
-        ##@.O..#
-        #...O..#
-        #.#.O..#
-        #...O..#
-        #......#
-        ########
-
-        <^^>>>vv<v>>v<<
-        """;
-
+    
     private const string? ExampleInput = 
         """
         ##########
@@ -136,8 +199,55 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
     }
     
     [Fact]
+    public void CalculatesDoubleWidthSumGpsAsExpected1() {
+        const string gpsExample =
+            """
+            ##########
+            ##...[]...
+            ##........
+            """;
+
+        var grid = gpsExample.SplitGrid();
+        Assert.Equal(105, SumGps(grid));
+    }
+    
+    [Fact]
+    public void CalculatesDoubleWidthSumGpsAsExpected2() {
+        const string gpsExample =
+            """
+            ####################
+            ##[].......[].[][]##
+            ##[]...........[].##
+            ##[]........[][][]##
+            ##[]......[]....[]##
+            ##..##......[]....##
+            ##..[]............##
+            ##..@......[].[][]##
+            ##......[][]..[]..##
+            ####################
+            """;
+
+        var grid = gpsExample.SplitGrid();
+        Assert.Equal(9021, SumGps(grid));
+    }
+    
+    [Fact]
     public void RobotMovesAsExpectedForSimpleExample() {
-        var (grid, moves) = Parse(SimpleExampleInput);
+        const string simpleExampleInput =
+            """
+            ########
+            #..O.O.#
+            ##@.O..#
+            #...O..#
+            #.#.O..#
+            #...O..#
+            #......#
+            ########
+
+            <^^>>>vv<v>>v<<
+            """;
+        
+        var (grid, moves) = Parse(simpleExampleInput);
         var robotPosition = grid.Find('@');
         
         Output.WriteLine("Initial state:");
@@ -171,5 +281,117 @@ public class Day15(string? input = null, ITestOutputHelper? outputHelper = null)
     public void SolvesPartOneExample() {
         var actual = new Day15(ExampleInput, Output).SolvePartOne();
         Assert.Equal(10092, actual);
+    }
+    
+    [Fact]
+    public void ExpandsGridAsExpected() {
+        var expandedInput = Expand(ExampleInput);
+        var (grid, _) = Parse(expandedInput);
+        
+        const string expected =
+            """
+            ####################
+            ##....[]....[]..[]##
+            ##............[]..##
+            ##..[][]....[]..[]##
+            ##....[]@.....[]..##
+            ##[]##....[]......##
+            ##[]....[]....[]..##
+            ##..[][]..[]..[][]##
+            ##........[]......##
+            ####################
+            """;
+
+        Assert.Equal(expected, grid.Render());
+    }
+    
+    [Fact]
+    public void RobotMovesAsExpectedForPartTwoExample() {
+        const string simpleExampleInput =
+            """
+            #######
+            #...#.#
+            #.....#
+            #..OO@#
+            #..O..#
+            #.....#
+            #######
+
+            <vv<<^^<<^^
+            """;
+        
+        var (grid, moves) = Parse(Expand(simpleExampleInput));
+        var robotPosition = grid.Find('@');
+        
+        Output.WriteLine("Initial state:");
+        Output.WriteLine(grid.Render());
+
+        foreach (var move in moves) {
+            robotPosition = AttemptDoubleWidthMove(robotPosition, move, grid);
+            
+            Output.WriteLine(string.Empty);
+            Output.WriteLine($"Move {directionChars[(int)move]}:");
+            Output.WriteLine(grid.Render());
+        }
+        
+        const string expected =
+            """
+            ##############
+            ##...[].##..##
+            ##...@.[]...##
+            ##....[]....##
+            ##..........##
+            ##..........##
+            ##############
+            """;
+
+        Assert.Equal(expected, grid.Render());
+    }
+
+    [Fact]
+    public void RobotMovesTrickyConfigurationAsExpected() {
+        const string trickyInput =
+            """
+            ####################
+            ##[]..[]......[][]##
+            ##[]...........[].##
+            ##...........@[][]##
+            ##..........[].[].##
+            ##..##[]..[].[]...##
+            ##...[]...[]..[]..##
+            ##.....[]..[].[][]##
+            ##........[]......##
+            ####################
+            """;
+        
+        var grid = trickyInput.SplitGrid();
+        var robotPosition = grid.Find('@');
+        
+        robotPosition = AttemptDoubleWidthMove(robotPosition, Directions.South, grid);
+        
+        Output.WriteLine(grid.Render());
+        
+        const string expected =
+            """
+            ####################
+            ##[]..[]......[][]##
+            ##[]...........[].##
+            ##............[][]##
+            ##...........@.[].##
+            ##..##[]..[][]....##
+            ##...[]...[].[]...##
+            ##.....[]..[].[][]##
+            ##........[]..[]..##
+            ####################
+            """;
+        Assert.Equal(expected, grid.Render());
+        
+        Assert.Equal(4, robotPosition.y);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day15(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(9021, actual);
     }
 }
