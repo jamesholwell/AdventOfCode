@@ -5,16 +5,7 @@ using AdventOfCode.Infrastructure;
 
 namespace AdventOfCode.Functions;
 
-internal class BenchmarkSolvers {
-    private readonly IConsole console;
-
-    private readonly SolverFactory factory;
-
-    public BenchmarkSolvers(IConsole console, SolverFactory factory) {
-        this.console = console;
-        this.factory = factory;
-    }
-
+internal class BenchmarkSolvers(IConsole console, SolverFactory factory) {
     public void Execute(PuzzleSpecification puzzle) {
         if (!InputReader.TryReadInput(puzzle, out var input, console))
             return;
