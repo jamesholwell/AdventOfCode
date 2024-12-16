@@ -4,25 +4,14 @@ using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2022;
 
-public class Day15 : Solver {
-    private ITestOutputHelper io;
-
-    //public Day15(ITestOutputHelper io, string? input = null) : base(input) {
-    //    this.io = io;
-    //}
-
-    public Day15(string? input = null) : base(input) { }
-
+public class Day15(string? input = null, ITestOutputHelper? outputHelper = null) : Solver(input, outputHelper) {
     private class Sensor {
         private readonly Tuple<int, int> position;
-
-        private readonly Tuple<int, int> nearestBeacon;
 
         private readonly int exclusionRange;
 
         public Sensor(Tuple<int, int> position, Tuple<int, int> nearestBeacon) {
             this.position = position;
-            this.nearestBeacon = nearestBeacon;
             this.exclusionRange = ManhattanDistance(position, nearestBeacon);
         }
 
@@ -52,20 +41,20 @@ public class Day15 : Solver {
         return Tuple.Create(int.Parse(parts[0].Substring("x=".Length)), int.Parse(parts[1].Substring("y=".Length)));
     }
 
-    public override long SolvePartOne() => SolvePartOneInner(2000000);
+    protected override long SolvePartOne() => SolvePartOneInner(2000000);
 
-    public override long SolvePartTwo() => SolvePartTwoInner(4000000);
+    protected override long SolvePartTwo() => SolvePartTwoInner(4000000);
 
     public long SolvePartOneInner(int height) {
         var sensors = Parse();
 
-        //DrawMap(sensors);
+        DrawMap(sensors);
 
         var exclusions = sensors.Select(p => p.ExclusionRangeAtHeight(height)).Where(r => r != null)
             .Cast<Tuple<int, int>>().ToArray();
 
-        var minX = exclusions.MinBy(e => e.Item1)!.Item1;
-        var maxX = exclusions.MaxBy(e => e.Item2)!.Item2;
+        var minX = exclusions.MinBy(e => e.Item1)?.Item1;
+        var maxX = exclusions.MaxBy(e => e.Item2)?.Item2;
 
         var coveredSpaces = 0;
         for (var x = minX; x < maxX; ++x) {
@@ -79,7 +68,7 @@ public class Day15 : Solver {
         var sensors = Parse();
 
         for (var y = 0; y < max; ++y) {
-            if (y % 100000 == 0) Console.WriteLine($"y = {y}");
+            if (y % 100000 == 0) Trace.WriteLine($"y = {y}");
             var exclusions = sensors.Select(p => p.ExclusionRangeAtHeight(y)).Where(r => r != null)
                 .Cast<Tuple<int, int>>().ToArray();
 
@@ -111,7 +100,8 @@ public class Day15 : Solver {
 
     private void DrawMap(Sensor[] sensors, int maxX = 20, int maxY = 20) {
         for (var y = -2; y < 22; ++y) {
-            var exclusions = sensors.Select(p => p.ExclusionRangeAtHeight(y)).Where(r => r != null).Cast<Tuple<int, int>>()
+            var exclusions = sensors.Select(p => p.ExclusionRangeAtHeight(y)).Where(r => r != null)
+                .Cast<Tuple<int, int>>()
                 .ToArray();
 
             var buffer = new string(' ', 31).ToCharArray();
@@ -121,7 +111,7 @@ public class Day15 : Solver {
                 buffer[5 + x] = exclusions.Any(e => e.Item1 <= x && x <= e.Item2) ? '#' : '.';
             }
 
-            io.WriteLine(new string(buffer));
+            Trace.WriteLine(new string(buffer));
         }
     }
 
@@ -144,13 +134,13 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3
 
     [Fact]
     public void SolvesPartOneExample() {
-        var actual = new Day15(ExampleInput).SolvePartOneInner(10);
+        var actual = new Day15(ExampleInput, Output).SolvePartOneInner(10);
         Assert.Equal(26, actual);
     }
 
     [Fact]
     public void SolvesPartTwoExample() {
-        var actual = new Day15(ExampleInput).SolvePartTwoInner(20);
+        var actual = new Day15(ExampleInput, Output).SolvePartTwoInner(20);
         Assert.Equal(56000011, actual);
     }
 }
