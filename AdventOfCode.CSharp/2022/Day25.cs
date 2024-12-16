@@ -1,14 +1,14 @@
-﻿using Xunit;
+﻿using AdventOfCode.Core;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2022;
 
-public class Day25 : Solver<string> {
-    public Day25(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
-
+public class Day25(string? input = null, ITestOutputHelper? outputHelper = null)
+    : Solver<string>(input, outputHelper) {
     private readonly char[] chars = "210-=".ToCharArray();
 
-    private readonly long[] values = {2L, 1L, 0L, -1L, -2L};
+    private readonly long[] values = { 2L, 1L, 0L, -1L, -2L };
 
     private long Decode(string s) {
         var sum = 0L;
@@ -43,9 +43,10 @@ public class Day25 : Solver<string> {
         return new string(buffer.ToArray());
     }
 
-    public override string SolvePartOne() => Encode(Shared.Split(Input).Select(i => Decode(i.Trim())).Sum());
+    protected override string SolvePartOne() => Encode(Shared.Split(Input).Select(i => Decode(i.Trim())).Sum());
 
-    public override string SolvePartTwo() => throw new InvalidOperationException("Start the smoothie maker yourself");
+    protected override string SolvePartTwo() =>
+        throw new InvalidOperationException("Start the smoothie maker yourself");
 
     private const string? ExampleInput = @"
 1=-0-2
@@ -81,7 +82,7 @@ public class Day25 : Solver<string> {
         Assert.Equal(12345, Decode("      1-0---0".Trim()));
         Assert.Equal(314159265, Decode("1121-1110-1=0".Trim()));
     }
-    
+
     [Fact]
     public void EncodesDecimalToSnafu() {
         Assert.Equal("            1".Trim(), Encode(1));
