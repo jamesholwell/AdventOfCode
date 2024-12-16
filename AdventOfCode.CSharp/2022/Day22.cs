@@ -1,10 +1,12 @@
 ﻿using System.Text;
+using AdventOfCode.Core;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2022;
 
-public class Day22 : Solver {
+public class Day22(string? input = null, ITestOutputHelper? outputHelper = null)
+    : Solver(input, outputHelper) {
     /*
      * map is oriented [y][x] and is 0-indexed to create a 1-space buffer of "off map" spaces
      *
@@ -12,7 +14,6 @@ public class Day22 : Solver {
      *
      * turn is right = +1, left = -1, no turn = 0 (last instruction)
      */
-    public Day22(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
 
     private class Cube {
         public Cube(int numberOfRows, int numberOfColumns, int faceSize) {
@@ -29,7 +30,7 @@ public class Day22 : Solver {
             NumberOfColumns = numberOfColumns;
             FaceSize = faceSize;
         }
-        
+
         public int NumberOfRows { get; }
 
         public int NumberOfColumns { get; }
@@ -46,7 +47,8 @@ public class Day22 : Solver {
         public Face this[int row, int column]
         {
             get => _faces[(row % 4 + 4) % 4, (column % 4 + 4) % 4];
-            set {
+            set
+            {
                 _faces[row, column] = value;
                 Faces.Add(value);
                 if (CurrentFace is EmptyFace) CurrentFace = value;
@@ -54,19 +56,15 @@ public class Day22 : Solver {
         }
     }
 
-    public enum Facing {
+    private enum Facing {
         Up = 3,
         Right = 0,
         Down = 1,
         Left = 2
     }
 
-    private abstract class Face {
-        protected Face(string[] map) {
-            Map = map;
-        }
-
-        public string[] Map { get; protected set; }
+    private abstract class Face(string[] map) {
+        public string[] Map { get; protected set; } = map;
 
         public Face? Up { get; set; }
 
@@ -75,11 +73,11 @@ public class Day22 : Solver {
         public Face? Right { get; set; }
 
         public int RightRotation { get; set; }
-        
+
         public Face? Down { get; set; }
 
         public int DownRotation { get; set; }
-        
+
         public Face? Left { get; set; }
 
         public int LeftRotation { get; set; }
@@ -87,8 +85,7 @@ public class Day22 : Solver {
         public string this[int newY] => Map[newY];
 
         public Face? GetDiagonal(Facing neighbor, Facing neighborOfNeighbor) {
-            var neigboringFace = neighbor switch
-            {
+            var neighboringFace = neighbor switch {
                 Facing.Up => Up,
                 Facing.Right => Right,
                 Facing.Down => Down,
@@ -96,7 +93,7 @@ public class Day22 : Solver {
                 _ => throw new ArgumentOutOfRangeException(nameof(neighbor), neighbor, null)
             };
 
-            if (neigboringFace == null) return null;
+            if (neighboringFace == null) return null;
 
             var neighborsRotation = neighbor switch {
                 Facing.Up => UpRotation,
@@ -106,19 +103,18 @@ public class Day22 : Solver {
                 _ => throw new ArgumentOutOfRangeException(nameof(neighbor), neighbor, null)
             };
 
-            var orientedNeighborOfNeighbor = (Facing) ((((int)neighborOfNeighbor - neighborsRotation) % 4 + 4) % 4);
-            return orientedNeighborOfNeighbor switch
-            {
-                Facing.Up => neigboringFace.Up,
-                Facing.Right => neigboringFace.Right,
-                Facing.Down => neigboringFace.Down,
-                Facing.Left => neigboringFace.Left,
+            var orientedNeighborOfNeighbor = (Facing)((((int)neighborOfNeighbor - neighborsRotation) % 4 + 4) % 4);
+            return orientedNeighborOfNeighbor switch {
+                Facing.Up => neighboringFace.Up,
+                Facing.Right => neighboringFace.Right,
+                Facing.Down => neighboringFace.Down,
+                Facing.Left => neighboringFace.Left,
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
 
         public int GetDiagonalRotation(Facing neighbor, Facing neighborOfNeighbor) {
-            var neigboringFace = neighbor switch {
+            var neighboringFace = neighbor switch {
                 Facing.Up => Up,
                 Facing.Right => Right,
                 Facing.Down => Down,
@@ -126,7 +122,7 @@ public class Day22 : Solver {
                 _ => throw new ArgumentOutOfRangeException(nameof(neighbor), neighbor, null)
             };
 
-            if (neigboringFace == null) throw new InvalidOperationException();
+            if (neighboringFace == null) throw new InvalidOperationException();
 
             var neighborsRotation = neighbor switch {
                 Facing.Up => UpRotation,
@@ -138,39 +134,34 @@ public class Day22 : Solver {
 
             var orientedNeighborOfNeighbor = (Facing)((((int)neighborOfNeighbor - neighborsRotation) % 4 + 4) % 4);
             return neighborsRotation + orientedNeighborOfNeighbor switch {
-                Facing.Up => neigboringFace.UpRotation,
-                Facing.Right => neigboringFace.RightRotation,
-                Facing.Down => neigboringFace.DownRotation,
-                Facing.Left => neigboringFace.LeftRotation,
+                Facing.Up => neighboringFace.UpRotation,
+                Facing.Right => neighboringFace.RightRotation,
+                Facing.Down => neighboringFace.DownRotation,
+                Facing.Left => neighboringFace.LeftRotation,
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
     }
 
-    private sealed class MapFace : Face {
-        private readonly string identity;
+    private sealed class MapFace(int row, int column, string[] map) : Face(map) {
+        // ReSharper disable once StringLiteralTypo
+        private readonly string identity = "ABCDEFGHIJKLMNOP".Substring(4 * row + column, 1);
 
-        public MapFace(int row, int column, string[] map) : base(map) {
-            identity = "ABCDEFGHIJKLMNOP".Substring(4 * row + column, 1);
-            OffsetY = map[0].Length * row;
-            OffsetX = map[0].Length * column;
-        }
+        public int OffsetY { get; } = map[0].Length * row;
 
-        public int OffsetY { get; }
+        public int OffsetX { get; } = map[0].Length * column;
 
-        public int OffsetX { get; }
-
-        public override string ToString() => identity + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, Map);
+        public override string ToString() => identity + Environment.NewLine + Environment.NewLine +
+                                             string.Join(Environment.NewLine, Map);
 
         public long Password((Face face, int x, int y, int f) finalPosition) {
             return 1000 * (OffsetY + finalPosition.y + 1) + 4 * (OffsetX + finalPosition.x + 1) + finalPosition.f;
         }
     }
 
-    private sealed class EmptyFace : Face {
-        public EmptyFace(int size) : base(Enumerable.Range(0, size).Select(_ => new string(' ', size)).ToArray()) { }
-    }
-    
+    private sealed class EmptyFace(int size)
+        : Face(Enumerable.Range(0, size).Select(_ => new string(' ', size)).ToArray());
+
     private (Cube cube, (int forward, int turn)[] instructions) Parse(string input) {
         var parts = input.SplitBy("\n\n");
         return (cube: ParseCube(parts[0]), ParseInstructions(parts[1]).ToArray());
@@ -191,7 +182,8 @@ public class Day22 : Solver {
 
         for (var row = 0; row < rows; ++row) {
             for (var column = 0; column < columns; ++column) {
-                var slice = normalizedLines.Skip(row * size).Take(size).Select(l => l.Substring(column * size, size)).ToArray();
+                var slice = normalizedLines.Skip(row * size).Take(size).Select(l => l.Substring(column * size, size))
+                    .ToArray();
 
                 if (string.IsNullOrWhiteSpace(slice[0]))
                     cube[row, column] = new EmptyFace(size);
@@ -258,13 +250,13 @@ public class Day22 : Solver {
 
         for (var row = 0; row < cube.NumberOfRows; ++row) {
             for (var y = 0; y < cube.FaceSize; ++y) {
-
                 for (var column = 0; column < cube.NumberOfColumns; ++column) {
                     var face = cube[row, column];
 
                     for (var x = 0; x < cube.FaceSize; ++x) {
-                        if (positionHistory?[face][x, y] != null) {
-                            buffer.Append(Facings[positionHistory[face][x, y]!.Value]);
+                        var history = positionHistory?[face][x, y];
+                        if (history != null) {
+                            buffer.Append(Facings[history.Value]);
                             continue;
                         }
 
@@ -315,7 +307,7 @@ public class Day22 : Solver {
             }
         }
     }
-    
+
     private static void Fold(Cube cube) {
         // make the inferred connections
         var notBored = true;
@@ -383,7 +375,8 @@ public class Day22 : Solver {
         }
     }
 
-    private ((Face face, int x, int y, int f), IDictionary<Face, int?[,]>) Walk(Cube cube, (Face face, int x, int y, int f) initialPosition, (int forward, int turn)[] instructions) {
+    private ((Face face, int x, int y, int f), IDictionary<Face, int?[,]>) Walk(Cube cube,
+        (Face face, int x, int y, int f) initialPosition, (int forward, int turn)[] instructions) {
         var positionHistory = cube.Faces.ToDictionary(f => f, _ => new int?[cube.FaceSize, cube.FaceSize]);
         var position = initialPosition;
         positionHistory[cube.CurrentFace][position.x, position.y] = position.f;
@@ -413,25 +406,25 @@ public class Day22 : Solver {
 
                 if (newX < 0) {
                     var rotation = newFace.LeftRotation;
-                    newFace = newFace.Left!;
+                    newFace = newFace.Left ?? throw new InvalidOperationException();
                     (newX, newY, newFacing) = Rotate(cube.FaceSize - 1, newY, newFacing, rotation);
                 }
 
                 if (newY < 0) {
                     var rotation = newFace.UpRotation;
-                    newFace = newFace.Up!;
+                    newFace = newFace.Up ?? throw new InvalidOperationException();
                     (newX, newY, newFacing) = Rotate(newX, cube.FaceSize - 1, newFacing, rotation);
                 }
 
                 if (newX >= cube.FaceSize) {
                     var rotation = newFace.RightRotation;
-                    newFace = newFace.Right!;
+                    newFace = newFace.Right ?? throw new InvalidOperationException();
                     (newX, newY, newFacing) = Rotate(0, newY, newFacing, rotation);
                 }
 
                 if (newY >= cube.FaceSize) {
                     var rotation = newFace.DownRotation;
-                    newFace = newFace.Down!;
+                    newFace = newFace.Down ?? throw new InvalidOperationException();
                     (newX, newY, newFacing) = Rotate(newX, 0, newFacing, rotation);
                 }
 
@@ -450,30 +443,30 @@ public class Day22 : Solver {
         return (position, positionHistory);
     }
 
-    public override long SolvePartOne() {
+    protected override long SolvePartOne() {
         var (cube, instructions) = Parse(Input);
         Link(cube);
-        
+
         var position = (cube.CurrentFace, 0, 0, 0);
-        Trace.WriteLine(Render(cube));
+        //Trace.WriteLine(Render(cube));
 
         var (finalPosition, positionHistory) = Walk(cube, position, instructions);
 
-        Output.WriteLine(Render(cube, positionHistory));
+        Trace.WriteLine(Render(cube, positionHistory));
 
-        return ((MapFace) finalPosition.face).Password(finalPosition);
+        return ((MapFace)finalPosition.face).Password(finalPosition);
     }
 
-    public override long SolvePartTwo() {
+    protected override long SolvePartTwo() {
         var (cube, instructions) = Parse(Input);
         Fold(cube);
 
         var position = (cube.CurrentFace, 0, 0, 0);
-        Trace.WriteLine(Render(cube));
+        //Trace.WriteLine(Render(cube));
 
         var (finalPosition, positionHistory) = Walk(cube, position, instructions);
 
-        Output.WriteLine(Render(cube, positionHistory));
+        Trace.WriteLine(Render(cube, positionHistory));
 
         return ((MapFace)finalPosition.face).Password(finalPosition);
     }
@@ -519,7 +512,7 @@ public class Day22 : Solver {
 
         Assert.Equal(expected.ReplaceLineEndings(), actual);
     }
-    
+
     [Fact]
     public void ParsesInstructionsCorrectly() {
         var (_, instructions) = Parse(ExampleInput);
@@ -555,7 +548,7 @@ public class Day22 : Solver {
 
         var actual = Render(cube, positionHistory);
         Output.WriteLine(actual);
-        
+
         Assert.Equal(expected.ReplaceLineEndings(), actual);
     }
 
@@ -604,7 +597,7 @@ public class Day22 : Solver {
         var actual = new Day22(ExampleInput, Output).SolvePartOne();
         Assert.Equal(6032, actual);
     }
-    
+
     [Fact]
     public void SolvesPartTwoExample() {
         var actual = new Day22(ExampleInput, Output).SolvePartTwo();
