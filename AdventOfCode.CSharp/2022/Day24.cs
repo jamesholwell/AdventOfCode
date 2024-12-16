@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using AdventOfCode.Core;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -149,12 +150,12 @@ public class Day24 : Solver {
         }
     }
     
-    public override long SolvePartOne() {
+    protected override long SolvePartOne() {
         var map = new Map(Input);
         return Solve(map, map.StartPosition, map.ExitPosition);
     }
 
-    public override long SolvePartTwo() {
+    protected override long SolvePartTwo() {
         var map = new Map(Input);
 
         var trip1 = Solve(map, map.StartPosition, map.ExitPosition);
