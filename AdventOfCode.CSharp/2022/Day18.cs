@@ -1,27 +1,18 @@
-﻿using System.Runtime.CompilerServices;
-using AdventOfCode.Core;
+﻿using AdventOfCode.Core;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2022;
 
-public class Day18 : Solver {
-    private ITestOutputHelper io;
-
-    //public Day18(ITestOutputHelper io, string? input = null) : base(input) {
-    //    this.io = io;
-    //}
-
-    public Day18(string? input = null) : base(input) { }
-
-    public override long SolvePartOne() {
+public class Day18(string? input = null, ITestOutputHelper? outputHelper = null) : Solver(input, outputHelper) {
+    protected override long SolvePartOne() {
         var origins = Parse();
         var faces = Faces(origins);
-        
+
         return faces.GroupBy(f => f).Count(g => g.Count() == 1);
     }
 
-    public override long SolvePartTwo() {
+    protected override long SolvePartTwo() {
         var origins = Parse().ToArray();
 
         var maxX = origins.Max(o => o.x);
@@ -36,12 +27,12 @@ public class Day18 : Solver {
         var fills = new Queue<(int x, int y, int z)>();
         fills.Enqueue((0, 0, 0));
 
-        Console.WriteLine($"Search space is {maxX} * {maxY} * {maxZ} = {maxX * maxY * maxZ}");
+        Trace.WriteLine($"Search space is {maxX} * {maxY} * {maxZ} = {maxX * maxY * maxZ}");
 
         while (fills.TryDequeue(out var c)) {
-            if (seen.Contains(c)) continue;
-            
-            seen.Add(c);
+            if (!seen.Add(c))
+                continue;
+
             filled[c.x, c.y, c.z] = true;
 
             // towards
@@ -97,7 +88,7 @@ public class Day18 : Solver {
          * Decompose the cube into faces, there are three characteristic planes from the origin
          *
          *          U (y + 1)
-         *         ____ 
+         *         ____
          *       /    /|
          *      /____/ | R (x + 1)
          *      |    | /
@@ -114,13 +105,13 @@ public class Day18 : Solver {
             yield return (x, y, z, Face.Front); // F
 
             yield return (x + 1, y, z, Face.Right); // R
-            
+
             yield return (x, y + 1, z, Face.Up); // U
-            
+
             yield return (x, y, z + 1, Face.Front); // B
-            
+
             yield return (x, y, z, Face.Right); // L
-            
+
             yield return (x, y, z, Face.Up); // D
         }
     }
@@ -143,13 +134,13 @@ public class Day18 : Solver {
 
     [Fact]
     public void SolvesPartOneExample() {
-        var actual = new Day18(ExampleInput).SolvePartOne();
+        var actual = new Day18(ExampleInput, Output).SolvePartOne();
         Assert.Equal(64, actual);
     }
 
     [Fact]
     public void SolvesPartTwoExample() {
-        var actual = new Day18(ExampleInput).SolvePartTwo();
+        var actual = new Day18(ExampleInput, Output).SolvePartTwo();
         Assert.Equal(58, actual);
     }
 }
