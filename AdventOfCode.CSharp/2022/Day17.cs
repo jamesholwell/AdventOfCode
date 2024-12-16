@@ -5,34 +5,22 @@ using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2022;
 
-public class Day17 : Solver {
-    private readonly ITestOutputHelper io;
-
-    public Day17(string? input = null) : base(input) { }
-
-    //public Day17(ITestOutputHelper io, string? input = null) : base(input) {
-    //    this.io = io;
-    //}
-
+public class Day17(string? input = null, ITestOutputHelper? outputHelper = null) : Solver(input, outputHelper) {
     private abstract class Rock {
-        public int x;
+        public int X;
 
-        public int y;
+        public int Y;
 
         public abstract IEnumerable<(int, int)> Cells { get; }
 
-        public bool TryPush(Chamber chamber, int offsetX) {
-            if (chamber.IsEmptySpace(Cells.Select(c => (c.Item1 + offsetX, c.Item2)))) {
-                x += offsetX;
-                return true;
-            }
-
-            return false;
+        public void TryPush(Chamber chamber, int offsetX) {
+            if (chamber.IsEmptySpace(Cells.Select(c => (c.Item1 + offsetX, c.Item2))))
+                X += offsetX;
         }
 
         public bool TryFall(Chamber chamber) {
             if (chamber.IsEmptySpace(Cells.Select(c => (c.Item1, c.Item2 - 1)))) {
-                y--;
+                Y--;
                 return true;
             }
 
@@ -43,82 +31,93 @@ public class Day17 : Solver {
     }
 
     private class Minus : Rock {
-        public override IEnumerable<(int, int)> Cells {
-            get {
-                yield return (x, y);
-                yield return (x + 1, y);
-                yield return (x + 2, y);
-                yield return (x + 3, y);
+        public override IEnumerable<(int, int)> Cells
+        {
+            get
+            {
+                yield return (X, Y);
+                yield return (X + 1, Y);
+                yield return (X + 2, Y);
+                yield return (X + 3, Y);
             }
         }
     }
 
     private class Plus : Rock {
-        public override IEnumerable<(int, int)> Cells {
-            get {
-                yield return (x, y + 1);
-                yield return (x + 1, y);
-                yield return (x + 1, y + 1);
-                yield return (x + 1, y + 2);
-                yield return (x + 2, y + 1);
+        public override IEnumerable<(int, int)> Cells
+        {
+            get
+            {
+                yield return (X, Y + 1);
+                yield return (X + 1, Y);
+                yield return (X + 1, Y + 1);
+                yield return (X + 1, Y + 2);
+                yield return (X + 2, Y + 1);
             }
         }
     }
 
     private class Ell : Rock {
-        public override IEnumerable<(int, int)> Cells {
-            get {
-                yield return (x, y);
-                yield return (x + 1, y);
-                yield return (x + 2, y);
-                yield return (x + 2, y + 1);
-                yield return (x + 2, y + 2);
+        public override IEnumerable<(int, int)> Cells
+        {
+            get
+            {
+                yield return (X, Y);
+                yield return (X + 1, Y);
+                yield return (X + 2, Y);
+                yield return (X + 2, Y + 1);
+                yield return (X + 2, Y + 2);
             }
         }
     }
 
     private class Bar : Rock {
-        public override IEnumerable<(int, int)> Cells {
-            get {
-                yield return (x, y);
-                yield return (x, y + 1);
-                yield return (x, y + 2);
-                yield return (x, y + 3);
+        public override IEnumerable<(int, int)> Cells
+        {
+            get
+            {
+                yield return (X, Y);
+                yield return (X, Y + 1);
+                yield return (X, Y + 2);
+                yield return (X, Y + 3);
             }
         }
     }
 
     private class Square : Rock {
-        public override IEnumerable<(int, int)> Cells {
-            get {
-                yield return (x, y);
-                yield return (x + 1, y);
-                yield return (x, y + 1);
-                yield return (x + 1, y + 1);
+        public override IEnumerable<(int, int)> Cells
+        {
+            get
+            {
+                yield return (X, Y);
+                yield return (X + 1, Y);
+                yield return (X, Y + 1);
+                yield return (X + 1, Y + 1);
             }
         }
     }
 
     private class Chamber {
-        public readonly int Width;
+        private readonly int width;
 
         public int Height { get; private set; }
 
-        private Dictionary<int, char[]> map;
+        private readonly Dictionary<int, char[]> map;
 
         public Chamber(int width = 7) {
-            this.Width = width;
-            this.map = new Dictionary<int, char[]>();
+            this.width = width;
+            this.map = new Dictionary<int, char[]> {
+                [0] = ("+" + new string('-', this.width) + "+").ToCharArray()
+            };
 
-            this.map[0] = ("+" + new string('-', this.Width) + "+").ToCharArray();
             this.Height = 0;
             EnsureHeadroom();
         }
 
         private void EnsureHeadroom() {
-            for (var y = Height + 7; y > Height ; --y) {
+            for (var y = Height + 7; y > Height; --y) {
                 if (map.ContainsKey(y)) continue;
-                this.map[y] = ("|" + new string('.', this.Width) + "|").ToCharArray();
+                this.map[y] = ("|" + new string('.', this.width) + "|").ToCharArray();
             }
         }
 
@@ -127,21 +126,23 @@ public class Day17 : Solver {
             var maxHeight = cells.Any() ? Math.Max(Height, cells.Max(p => p.Item2 + 1)) : Height + 1;
 
             for (var y = maxHeight; y >= 0; --y) {
-                var mapy = map[y].ToArray();
+                var mapY = map[y].ToArray();
                 foreach (var c in cells.Where(c => c.Item2 == y - 1))
-                    if (mapy[c.Item1 + 1] == '.') mapy[c.Item1 + 1] = '@';
+                    if (mapY[c.Item1 + 1] == '.')
+                        mapY[c.Item1 + 1] = '@';
 
-                writeLine(new string(mapy));
+                writeLine(new string(mapY));
             }
         }
 
         public string GetTop() {
             if (Height > 2)
-                return new string(map[Height].Concat(map[Height - 1]).Concat(map[Height-2]).Concat(map[Height - 3]).ToArray());
+                return new string(map[Height].Concat(map[Height - 1]).Concat(map[Height - 2]).Concat(map[Height - 3])
+                    .ToArray());
 
             if (Height > 1)
                 return new string(map[Height].Concat(map[Height - 1]).Concat(map[Height - 2]).ToArray());
-            
+
             if (Height > 0)
                 return new string(map[Height].Concat(map[Height - 1]).ToArray());
 
@@ -166,11 +167,13 @@ public class Day17 : Solver {
         }
     }
 
-    public override long SolvePartOne() {
-        var gasJetInput = Input.Trim().Select(c => c == '>' ? 1 : c == '<' ? -1 : throw new ArgumentOutOfRangeException());
+    protected override long SolvePartOne() {
+        var gasJetInput =
+            Input.Trim().Select(c => c == '>' ? 1 : c == '<' ? -1 : throw new ArgumentOutOfRangeException());
         using var gasJets = new Utilities.InfiniteCyclingEnumerable<int>(gasJetInput).GetEnumerator();
 
-        var piecesInput = new Func<Rock>[] { () => new Minus(), () => new Plus(), () => new Ell(), () => new Bar(), () => new Square()};
+        var piecesInput = new Func<Rock>[]
+            { () => new Minus(), () => new Plus(), () => new Ell(), () => new Bar(), () => new Square() };
         using var pieces = new Utilities.InfiniteCyclingEnumerable<Rock>(piecesInput).GetEnumerator();
 
         var chamber = new Chamber();
@@ -179,45 +182,38 @@ public class Day17 : Solver {
             pieces.MoveNext();
 
             var r = pieces.Current;
-            r.y = chamber.Height + 3;
-            r.x = 2;
-
-            //io.WriteLine($"Rock {i} begins falling:");
-            //chamber.Render(io.WriteLine, r);
-            //io.WriteLine(string.Empty);
+            r.Y = chamber.Height + 3;
+            r.X = 2;
 
             while (true) {
                 gasJets.MoveNext();
 
-                var isPushed = r.TryPush(chamber, gasJets.Current);
-                //io.WriteLine($"Jet of gas pushes rock {(gasJets.Current == 1 ? "right" : "left")}{(isPushed ? "" : ", but nothing happens")}:");
-                //chamber.Render(io.WriteLine, r);
-                //io.WriteLine(string.Empty);
-
+                r.TryPush(chamber, gasJets.Current);
                 var isFallen = r.TryFall(chamber);
-                //io.WriteLine($"Rock falls 1 unit{(isFallen ? "" : ", causing it to come to rest")}:");
                 if (!isFallen)
                     r.CommitPosition(chamber);
 
-                //chamber.Render(io.WriteLine, r);
-                //io.WriteLine(string.Empty);
+                // chamber.Render(Trace.WriteLine);
+                // Trace.WriteLine(string.Empty);
 
                 if (!isFallen) break;
             }
         }
-        
-        //chamber.Render(io.WriteLine);
-        //io.WriteLine(string.Empty);
+
+        chamber.Render(Trace.WriteLine);
+        Trace.WriteLine(string.Empty);
         return chamber.Height;
     }
 
-    public override long SolvePartTwo() {
-        var gasJetInput = Input.Trim().Select(c => c == '>' ? 1 : c == '<' ? -1 : throw new ArgumentOutOfRangeException()).ToArray();
+    protected override long SolvePartTwo() {
+        var gasJetInput = Input.Trim()
+            .Select(c => c == '>' ? 1 : c == '<' ? -1 : throw new ArgumentOutOfRangeException()).ToArray();
         var gasJetModulus = gasJetInput.Length;
         using var gasJets = new Utilities.InfiniteCyclingEnumerable<int>(gasJetInput).GetEnumerator();
-        Console.WriteLine($"Gas jet cycle is {gasJetInput.Length}");
+        Trace.WriteLine($"Gas jet cycle is {gasJetInput.Length}");
 
-        var piecesInput = new Func<Rock>[] { () => new Minus(), () => new Plus(), () => new Ell(), () => new Bar(), () => new Square() };
+        var piecesInput = new Func<Rock>[]
+            { () => new Minus(), () => new Plus(), () => new Ell(), () => new Bar(), () => new Square() };
         using var pieces = new Utilities.InfiniteCyclingEnumerable<Rock>(piecesInput).GetEnumerator();
 
         var chamber = new Chamber();
@@ -227,27 +223,27 @@ public class Day17 : Solver {
         var leadIn = 0;
         var cycleLength = 0;
         var cycleHeight = 0;
-        
+
         for (var p = 0; p < gasJetModulus * 1000; ++p) {
             pieces.MoveNext();
 
             var r = pieces.Current;
-            r.y = chamber.Height + 3;
-            r.x = 2;
-            
+            r.Y = chamber.Height + 3;
+            r.X = 2;
+
             while (true) {
                 gasJets.MoveNext();
                 g++;
 
                 r.TryPush(chamber, gasJets.Current);
 
-                if (r.TryFall(chamber)) 
+                if (r.TryFall(chamber))
                     continue;
 
                 r.CommitPosition(chamber);
                 break;
             }
-            
+
             heightHistory[p + 1] = chamber.Height;
 
             var k = (chamber.GetTop(), p % 5, g % gasJetModulus);
@@ -256,44 +252,44 @@ public class Day17 : Solver {
                 if (p > leadIn + cycleLength * 2) break;
             }
             else if (topHistory.ContainsKey(k) && leadIn == 0) {
-                Console.WriteLine($"Detected loop: {k}");
-                Console.WriteLine($"...step {topHistory[k]} @ height {heightHistory[topHistory[k]]} === step {p} @ height {chamber.Height}");
+                Trace.WriteLine($"Detected loop: {k}");
+                Trace.WriteLine(
+                    $"...step {topHistory[k]} @ height {heightHistory[topHistory[k]]} === step {p} @ height {chamber.Height}");
 
-                leadIn = topHistory[k]; // first 11 pieces are the run up to the cycle
+                leadIn = topHistory[k]; // first 11 pieces are the run-up to the cycle
 
                 cycleLength = p - leadIn;
-                cycleHeight = heightHistory[p] - heightHistory[leadIn]; // the "add" for each cycle is the height before the cycle to the height at the end
+                cycleHeight =
+                    heightHistory[p] -
+                    heightHistory
+                        [leadIn]; // the "add" for each cycle is the height before the cycle to the height at the end
 
-                Console.WriteLine($"... lead in of {leadIn} followed by cycle of {cycleLength} for rise of {cycleHeight}");
+                Trace.WriteLine(
+                    $"... lead in of {leadIn} followed by cycle of {cycleLength} for rise of {cycleHeight}");
             }
             else
                 topHistory.Add(k, p);
-
         }
 
         for (var i = leadIn + 1; i < heightHistory.Count; i++) {
             var prediction = PredictionAtHeight(heightHistory, leadIn, cycleLength, cycleHeight, i);
             Assert.Equal(heightHistory[i], prediction);
         }
-        
+
         return PredictionAtHeight(heightHistory, leadIn, cycleLength, cycleHeight, 1000000000000);
     }
 
-    private static long PredictionAtHeight(Dictionary<int, int> heightHistory, int leadIn, int cycleLength, int cycleHeight, long predictionHeight) {
+    private static long PredictionAtHeight(Dictionary<int, int> heightHistory, int leadIn, int cycleLength,
+        int cycleHeight, long predictionHeight) {
         var heightOfLeadIn = heightHistory[leadIn];
 
         var numberOfCycles = (predictionHeight - leadIn) / cycleLength;
-        var heightOfCycles = (long) cycleHeight * numberOfCycles;
+        var heightOfCycles = cycleHeight * numberOfCycles;
 
-        var residual = (int) (predictionHeight - leadIn - numberOfCycles * cycleLength);
+        var residual = (int)(predictionHeight - leadIn - numberOfCycles * cycleLength);
         var heightOfResidual = heightHistory[leadIn + cycleLength + residual] - heightHistory[leadIn + cycleLength];
 
         return heightOfLeadIn + heightOfCycles + heightOfResidual;
-    }
-
-    private bool IsPeriodic(ICollection<int> series, int period) {
-        var chunks = series.Take(period * (series.Count / period)).Chunk(period).ToArray();
-        return Enumerable.Range(0, period - 1).All(p => chunks.DistinctBy(c => c[p]).Count() == 1);
     }
 
     private const string? ExampleInput = @"
@@ -302,23 +298,24 @@ public class Day17 : Solver {
 
     [Fact]
     public void SolvesPartOneExample() {
-        var actual = new Day17(ExampleInput).SolvePartOne();
+        var actual = new Day17(ExampleInput, Output).SolvePartOne();
         Assert.Equal(3068, actual);
     }
 
     [Fact]
     public void SolvesPartTwoExample() {
-        var actual = new Day17(ExampleInput).SolvePartTwo();
+        var actual = new Day17(ExampleInput, Output).SolvePartTwo();
         Assert.Equal(1514285714288, actual);
     }
 
-    private static class Utilities { 
+    private static class Utilities {
         internal class InfiniteCyclingEnumerable<T> : IEnumerable<T> {
             private readonly EnumeratorBase enumerator;
 
             public InfiniteCyclingEnumerable(IEnumerable<T> values) {
                 this.enumerator = new ArrayEnumerator(values.ToArray());
             }
+
             public InfiniteCyclingEnumerable(IEnumerable<Func<T>> factories) {
                 this.enumerator = new LambdaEnumerator(factories.ToArray());
             }
@@ -326,46 +323,36 @@ public class Day17 : Solver {
             public IEnumerator<T> GetEnumerator() => this.enumerator;
 
             IEnumerator IEnumerable.GetEnumerator() => this.enumerator;
-            
+
             private abstract class EnumeratorBase : IEnumerator<T> {
-                protected int index = -1;
-                
+                protected int Index = -1;
+
                 public bool MoveNext() {
-                    index++;
+                    Index++;
                     return true;
                 }
 
                 public void Reset() {
-                    index = -1;
+                    Index = -1;
                 }
 
                 public abstract T Current { get; }
 
-                object IEnumerator.Current => Current!;
+                object IEnumerator.Current => Current ?? throw new InvalidOperationException();
 
                 public void Dispose() { }
             }
-            private class ArrayEnumerator : EnumeratorBase {
-                private readonly T[] values;
 
-                public ArrayEnumerator(T[] values) {
-                    this.values = values;
-                }
-                
-                public override T Current => index < 0 ? throw new InvalidOperationException() : values[index % values.Length];
+            private class ArrayEnumerator(T[] values) : EnumeratorBase {
+                public override T Current =>
+                    Index < 0 ? throw new InvalidOperationException() : values[Index % values.Length];
             }
 
-            private class LambdaEnumerator : EnumeratorBase {
-                private readonly Func<T>[] factories;
-                
-                public LambdaEnumerator(Func<T>[] factories) {
-                    this.factories = factories;
-                }
-                
-                public override T Current => index < 0 ? throw new InvalidOperationException() : factories[index % factories.Length].Invoke();
-
+            private class LambdaEnumerator(Func<T>[] factories) : EnumeratorBase {
+                public override T Current => Index < 0
+                    ? throw new InvalidOperationException()
+                    : factories[Index % factories.Length].Invoke();
             }
         }
     }
-
 }
