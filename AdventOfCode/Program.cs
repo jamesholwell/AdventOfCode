@@ -51,6 +51,10 @@ var stageArgument = new Option<bool>(
     "--stage",
     "Stage a 'today' solver into the main project");
 
+var finishArgument = new Option<bool>(
+    "--finish",
+    "Finish work on a 'today' solver and move to the main project");
+
 var traceArgument = new Option<bool>(
     "--trace",
     "Output trace information");
@@ -67,7 +71,7 @@ var forceArgument = new Option<bool>(
     "--force",
     "Force an operation to continue despite errors (e.g. to overwrite an existing file)");
 
-var root = new RootCommand { puzzleArgument, startArgument, stageArgument, traceArgument, listArgument, benchmarkArgument, forceArgument };
+var root = new RootCommand { puzzleArgument, startArgument, stageArgument, finishArgument, traceArgument, listArgument, benchmarkArgument, forceArgument };
 
 root.SetHandler(context => {
     var puzzle = context.ParseResult.GetValueForArgument(puzzleArgument);
@@ -88,6 +92,12 @@ root.SetHandler(context => {
     if (isStaging) {
         var isForcing = context.ParseResult.GetValueForOption(forceArgument);
         new StageSolver(context.Console).Execute(puzzle, isForcing);
+        return;
+    }
+    
+    var isFinishing = context.ParseResult.GetValueForOption(finishArgument);
+    if (isFinishing) {
+        new FinishSolver(context.Console).Execute(puzzle);
         return;
     }
     
