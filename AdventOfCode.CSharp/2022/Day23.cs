@@ -1,19 +1,16 @@
 ﻿using System.Text;
+using AdventOfCode.Core;
+using AdventOfCode.Core.Output;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2022;
 
-public class Day23 : Solver {
-    public Day23(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
-
-    private class Elf {
+public class Day23(string? input = null, ITestOutputHelper? outputHelper = null)
+    : Solver(input, outputHelper) {
+    private class Elf(int row, int column) {
         // x runs left to right; y runs from top to bottom
-        public (int x, int y) Position;
-
-        public Elf(int row, int column) {
-            this.Position = (column, row);
-        }
+        public (int x, int y) Position = (column, row);
 
         public (Elf, (int x, int y))? ProposedNextPosition(HashSet<(int x, int y)> currentPositions, int round) {
             var x = Position.x;
@@ -21,17 +18,17 @@ public class Day23 : Solver {
 
             // grid from top left
             var isEmptyNorthWest = !currentPositions.Contains((x - 1, y - 1));
-            var isEmptyNorth     = !currentPositions.Contains((x    , y - 1));
+            var isEmptyNorth = !currentPositions.Contains((x, y - 1));
             var isEmptyNorthEast = !currentPositions.Contains((x + 1, y - 1));
-            
-            var isEmptyWest      = !currentPositions.Contains((x - 1, y    ));
-            var isEmptyEast      = !currentPositions.Contains((x + 1, y    ));
+
+            var isEmptyWest = !currentPositions.Contains((x - 1, y));
+            var isEmptyEast = !currentPositions.Contains((x + 1, y));
 
             var isEmptySouthWest = !currentPositions.Contains((x - 1, y + 1));
-            var isEmptySouth     = !currentPositions.Contains((x    , y + 1));
+            var isEmptySouth = !currentPositions.Contains((x, y + 1));
             var isEmptySouthEast = !currentPositions.Contains((x + 1, y + 1));
 
-            // compass from north west
+            // compass from north-west
             var isEmptyNortherly = isEmptyNorthWest && isEmptyNorth && isEmptyNorthEast;
             var isEmptyEasterly = isEmptyNorthEast && isEmptyEast && isEmptySouthEast;
             var isEmptySoutherly = isEmptySouthEast && isEmptySouth && isEmptySouthWest;
@@ -70,6 +67,7 @@ public class Day23 : Solver {
         Shared.Split(input)
             .SelectMany((line, row) => line.Select((cell, column) => cell == '#' ? new Elf(row, column) : null))
             .Where(maybeElf => maybeElf != null)
+            // ReSharper disable once NullableWarningSuppressionIsUsed - see the previous line
             .Select(probablyElf => probablyElf!)
             .ToArray();
 
@@ -89,7 +87,8 @@ public class Day23 : Solver {
         return RenderInner(positions, minX, maxX, minY, maxY, out _);
     }
 
-    private string RenderInner(HashSet<(int x, int y)> positions, int minX, int maxX, int minY, int maxY, out int emptySpaces) {
+    private string RenderInner(HashSet<(int x, int y)> positions, int minX, int maxX, int minY, int maxY,
+        out int emptySpaces) {
         var buffer = new StringBuilder((maxX - minX + 2) * (maxY - minY + 1) + 50);
         emptySpaces = 0;
 
@@ -111,15 +110,17 @@ public class Day23 : Solver {
     private static bool ExecuteRound(Elf[] elves, int round) {
         var currentPositions = new HashSet<(int x, int y)>(elves.Select(e => e.Position));
 
-        var movements = 
+        var movements =
             elves
-            .AsParallel()
-            .Select(e => e.ProposedNextPosition(currentPositions, round))
-            .Where(p => p != null)
-            .GroupBy(p => p!.Value.Item2)
-            .Where(g => g.Count() == 1)
-            .Select(g => g.Single()!.Value)
-            .ToArray();
+                .AsParallel()
+                .Select(e => e.ProposedNextPosition(currentPositions, round))
+                .Where(p => p != null)
+                // ReSharper disable once NullableWarningSuppressionIsUsed -- check the previous line
+                .GroupBy(p => p!.Value.Item2)
+                .Where(g => g.Count() == 1)
+                // ReSharper disable once NullableWarningSuppressionIsUsed -- check the previous line
+                .Select(g => g.Single()!.Value)
+                .ToArray();
 
         foreach (var movement in movements) {
             movement.Item1.Position = movement.Item2;
@@ -128,7 +129,7 @@ public class Day23 : Solver {
         return movements.Any();
     }
 
-    public override long SolvePartOne() {
+    protected override long SolvePartOne() {
         var elves = Parse(Input);
         var emptySpaces = 0;
 
@@ -146,7 +147,7 @@ public class Day23 : Solver {
         return emptySpaces;
     }
 
-    public override long SolvePartTwo() {
+    protected override long SolvePartTwo() {
         var elves = Parse(Input);
         var moving = true;
         var round = 0;
@@ -154,7 +155,7 @@ public class Day23 : Solver {
         Trace.WriteLine(Render(elves, out _));
 
         // tick!
-        while(moving) {
+        while (moving) {
             moving = ExecuteRound(elves, round++);
 
             Trace.WriteLine();
@@ -164,7 +165,7 @@ public class Day23 : Solver {
 
         return round;
     }
-    
+
     private const string SmallExampleInput = @"
 .....
 ..##.
@@ -184,7 +185,8 @@ public class Day23 : Solver {
 .#..#..
 ";
 
-    [Fact] public void ParsesInputCorrectly() {
+    [Fact]
+    public void ParsesInputCorrectly() {
         var elves = Parse(ExampleInput);
         var actual = Render(elves, 0, 6, 0, 6);
         Output.WriteLine(actual);
@@ -260,7 +262,7 @@ public class Day23 : Solver {
 
 
         ExecuteRound(elves, 3);
-        
+
         var actualRound4 = Render(elves, 0, 4, 0, 5);
         Trace.WriteLine(actualRound4);
         Trace.WriteLine();
