@@ -1,48 +1,42 @@
-﻿using Xunit;
+﻿using AdventOfCode.Core;
+using AdventOfCode.Core.Output;
+using Xunit;
 using Xunit.Abstractions;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace AdventOfCode.CSharp._2022;
 
-public class Day21 : Solver {
-    public Day21(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
-
+public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
+    : Solver(input, outputHelper) {
     private interface IYellingMonkey {
         string Name { get; }
 
         long Value { get; }
     }
 
-    private class SpecificNumberYellingMonkey : IYellingMonkey {
-        public SpecificNumberYellingMonkey(string name, long value) {
-            Value = value;
-            Name = name;
-        }
+    private class SpecificNumberYellingMonkey(string name, long value) : IYellingMonkey {
+        public string Name { get; } = name;
 
-        public string Name { get; }
-
-        public long Value { get; }
+        public long Value { get; } = value;
 
         public override string ToString() => $"{Name}: {Value}";
     }
 
-    private class MathOperationYellingMonkey : IYellingMonkey {
-        public MathOperationYellingMonkey(string name, string leftMonkey, Operators @operator, string rightMonkey) {
-            Operator = @operator;
-            LeftMonkey = leftMonkey;
-            RightMonkey = rightMonkey;
-            Name = name;
-        }
+    private class MathOperationYellingMonkey(
+        string name,
+        string leftMonkey,
+        MathOperationYellingMonkey.Operators @operator,
+        string rightMonkey)
+        : IYellingMonkey {
+        public string Name { get; } = name;
 
-        public string Name { get; }
-        
-        public Operators Operator { get; set; }
+        public Operators Operator { get; set; } = @operator;
 
-        public string LeftMonkey { get; init; }
-        
+        public string LeftMonkey { get; init; } = leftMonkey;
+
         public IYellingMonkey? Left { get; set; }
 
-        public string RightMonkey { get; init; }
+        public string RightMonkey { get; init; } = rightMonkey;
 
         public IYellingMonkey? Right { get; set; }
 
@@ -67,7 +61,7 @@ public class Day21 : Solver {
 
         public override string ToString() => $"{Name}: {LeftMonkey} {OperatorSymbol} {RightMonkey}";
 
-        public string OperatorSymbol => Operator switch {
+        private string OperatorSymbol => Operator switch {
             Operators.Add => "+",
             Operators.Subtract => "-",
             Operators.Multiply => "*",
@@ -77,12 +71,8 @@ public class Day21 : Solver {
         };
     }
 
-    private class VariableYellingMonkey : IYellingMonkey {
-        public VariableYellingMonkey(string name) {
-            Name = name;
-        }
-
-        public string Name { get; }
+    private class VariableYellingMonkey(string name) : IYellingMonkey {
+        public string Name { get; } = name;
 
         public long Value => throw new InvalidOperationException();
 
@@ -112,15 +102,16 @@ public class Day21 : Solver {
         }
     }
 
-    public override long SolvePartOne() => ResolveLinks(Parse(Input))["root"].Value;
+    protected override long SolvePartOne() => ResolveLinks(Parse(Input))["root"].Value;
 
     private IDictionary<string, IYellingMonkey> ResolveLinks(IEnumerable<IYellingMonkey> inputMonkeys) {
         var monkeys = inputMonkeys.ToDictionary(m => m.Name, m => m);
 
-        foreach (var monkey in monkeys) 
+        foreach (var monkey in monkeys)
             Trace.WriteLine(monkey.Value);
 
-        foreach (var monkey in monkeys.Values.Where(m => m is MathOperationYellingMonkey).Cast<MathOperationYellingMonkey>()) {
+        foreach (var monkey in monkeys.Values.Where(m => m is MathOperationYellingMonkey)
+                     .Cast<MathOperationYellingMonkey>()) {
             if (!monkeys.TryGetValue(monkey.LeftMonkey, out var left) ||
                 !monkeys.TryGetValue(monkey.RightMonkey, out var right)) {
                 throw new InvalidOperationException();
@@ -133,23 +124,25 @@ public class Day21 : Solver {
         return monkeys;
     }
 
-    public override long SolvePartTwo() {
+    protected override long SolvePartTwo() {
         var inputMonkeys = Parse(Input).ToDictionary(m => m.Name, m => m);
-        var root = (MathOperationYellingMonkey) inputMonkeys["root"];
+        var root = (MathOperationYellingMonkey)inputMonkeys["root"];
         root.Operator = MathOperationYellingMonkey.Operators.IsEqual;
+        // ReSharper disable StringLiteralTypo
         inputMonkeys["humn"] = new VariableYellingMonkey("humn");
+        // ReSharper restore StringLiteralTypo
 
-        var linkedMonkeys = ResolveLinks(inputMonkeys.Values);
-        
-        Output.WriteLine();
-        Output.WriteLine("Left:");
-        var leftEvaluated = Evaluate(root.Left!);
-        Output.WriteLine(leftEvaluated);
-        
-        Output.WriteLine();
-        Output.WriteLine("Right:");
-        var rightEvaluated = Evaluate(root.Right!);
-        Output.WriteLine(rightEvaluated);
+        ResolveLinks(inputMonkeys.Values);
+
+        Trace.WriteLine();
+        Trace.WriteLine("Left:");
+        var leftEvaluated = Evaluate(root.Left ?? throw new InvalidOperationException());
+        Trace.WriteLine(leftEvaluated);
+
+        Trace.WriteLine();
+        Trace.WriteLine("Right:");
+        var rightEvaluated = Evaluate(root.Right ?? throw new InvalidOperationException());
+        Trace.WriteLine(rightEvaluated);
 
         var isLeftResult = leftEvaluated is SpecificNumberYellingMonkey;
         var result = isLeftResult ? leftEvaluated.Value : rightEvaluated.Value;
@@ -224,8 +217,6 @@ public class Day21 : Solver {
 
             throw new InvalidOperationException();
         }
-
-        return -1;
     }
 
     private IYellingMonkey Evaluate(IYellingMonkey monkey) {
@@ -237,25 +228,30 @@ public class Day21 : Solver {
                 return vvm;
 
             case MathOperationYellingMonkey mom:
-                var left = Evaluate(mom.Left!);
-                var right = Evaluate(mom.Right!);
+                var left = Evaluate(mom.Left ?? throw new InvalidOperationException());
+                var right = Evaluate(mom.Right ?? throw new InvalidOperationException());
 
-                if (left is SpecificNumberYellingMonkey lsvm && right is SpecificNumberYellingMonkey rsvm)
+                if (left is SpecificNumberYellingMonkey && right is SpecificNumberYellingMonkey)
                     return mom.Operator switch {
-                        MathOperationYellingMonkey.Operators.Add => new SpecificNumberYellingMonkey(string.Empty, left.Value + right.Value),
-                        MathOperationYellingMonkey.Operators.Subtract => new SpecificNumberYellingMonkey(string.Empty, left.Value - right.Value),
-                        MathOperationYellingMonkey.Operators.Multiply => new SpecificNumberYellingMonkey(string.Empty, left.Value * right.Value),
-                        MathOperationYellingMonkey.Operators.Divide => new SpecificNumberYellingMonkey(string.Empty, left.Value / right.Value),
+                        MathOperationYellingMonkey.Operators.Add => new SpecificNumberYellingMonkey(string.Empty,
+                            left.Value + right.Value),
+                        MathOperationYellingMonkey.Operators.Subtract => new SpecificNumberYellingMonkey(string.Empty,
+                            left.Value - right.Value),
+                        MathOperationYellingMonkey.Operators.Multiply => new SpecificNumberYellingMonkey(string.Empty,
+                            left.Value * right.Value),
+                        MathOperationYellingMonkey.Operators.Divide => new SpecificNumberYellingMonkey(string.Empty,
+                            left.Value / right.Value),
                         _ => throw new ArgumentOutOfRangeException()
                     };
 
-                return new MathOperationYellingMonkey(string.Empty, left.ToString(), mom.Operator, right.ToString()) { Left = left, Right = right };
+                return new MathOperationYellingMonkey(string.Empty, left.ToString() ?? string.Empty, mom.Operator,
+                    right.ToString() ?? string.Empty) { Left = left, Right = right };
             default:
                 throw new InvalidOperationException();
         }
     }
 
-    private const string? ExampleInput = @"
+    private const string ExampleInput = @"
 root: pppw + sjmn
 dbpl: 5
 cczh: sllz + lgvd
@@ -275,7 +271,8 @@ hmdt: 32
 
     [Fact]
     public void ParsesCorrectly() {
-        Assert.Equal(ExampleInput, "\r\n" + string.Join("\r\n", Parse(ExampleInput!).Select(m => m.ToString())) + "\r\n");
+        Assert.Equal(ExampleInput,
+            "\r\n" + string.Join("\r\n", Parse(ExampleInput).Select(m => m.ToString())) + "\r\n");
     }
 
     [Fact]
