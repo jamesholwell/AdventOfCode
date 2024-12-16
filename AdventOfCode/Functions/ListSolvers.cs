@@ -4,16 +4,7 @@ using AdventOfCode.Infrastructure;
 
 namespace AdventOfCode.Functions;
 
-internal class ListSolvers {
-    private readonly IConsole console;
-
-    private readonly SolverFactory factory;
-
-    public ListSolvers(IConsole console, SolverFactory factory) {
-        this.console = console;
-        this.factory = factory;
-    }
-
+internal class ListSolvers(IConsole console, SolverFactory factory) {
     public void Execute() {
         var solvers = factory.List().ToArray();
 
