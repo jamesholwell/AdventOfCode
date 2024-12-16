@@ -1,4 +1,3 @@
-using System.Reflection;
 using AdventOfCode.Core;
 using Xunit.Abstractions;
 
@@ -54,10 +53,17 @@ public class SolverFactory {
                 ? string.Empty
                 : type.Namespace[(type.Namespace.LastIndexOf('.') + 1)..].TrimStart('_');
 
-            var solverAttribute = type.GetCustomAttribute<SolverAttribute>();
+            var parts = type.Name.Split(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], 2,
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+            var day = parts.Length == 2 ? type.Name[..^parts[1].Length] : type.Name;
+            var suffix = parts.Length == 2 ? parts[1].ToLowerInvariant() : string.Empty;
+            
             solvers[
-                @event.ToLowerInvariant() + "-" +
-                (solverAttribute?.Key ?? type.Name.ToLowerInvariant() + (prefix == string.Empty ? string.Empty : "-" + prefix))] = type;
+                @event.ToLowerInvariant() + "-" + day.ToLowerInvariant() +
+                (prefix == string.Empty ? string.Empty : "-" + prefix) +
+                (suffix == string.Empty ? string.Empty : "-" + suffix) 
+            ] = type;
         }
 
         return this;
