@@ -5,16 +5,8 @@ using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2022;
 
-public class Day16 : Solver {
-    private readonly ITestOutputHelper? io;
-
-    private static Valve[] interestingValves;
-
-    public Day16(string? input = null) : base(input) { }
-
-    //public Day16(ITestOutputHelper io, string? input = null) : base(input) {
-    //    this.io = io;
-    //}
+public class Day16(string? input = null, ITestOutputHelper? outputHelper = null) : Solver(input, outputHelper) {
+    private static Valve[]? _interestingValves;
 
     private sealed class Valve {
         public string Label { get; }
@@ -33,7 +25,8 @@ public class Day16 : Solver {
             Distances = new Dictionary<Valve, int>();
         }
 
-        public override string ToString() => $"Valve {Label} has flow rate={FlowRate}; {(Connections.Length > 1 ? "tunnels lead to valves" : "tunnel leads to valve")} {string.Join(", ", Connections)}";
+        public override string ToString() =>
+            $"Valve {Label} has flow rate={FlowRate}; {(Connections.Length > 1 ? "tunnels lead to valves" : "tunnel leads to valve")} {string.Join(", ", Connections)}";
     }
 
     private static Valve[] ParseValves(string input) {
@@ -51,7 +44,8 @@ public class Day16 : Solver {
 
         public int CurrentPressureReleased = 0;
 
-        public Scenario(Valve currentValve, Valve[] valves, int timeLeft, int flowRate = 0, int currentPressureReleased = 0) {
+        public Scenario(Valve currentValve, Valve[] valves, int timeLeft, int flowRate = 0,
+            int currentPressureReleased = 0) {
             CurrentValve = currentValve;
             VisitedValves = valves;
             TimeLeft = timeLeft;
@@ -62,16 +56,17 @@ public class Day16 : Solver {
         public Scenario MoveToOpen(Valve nextValve, int distance) {
             var timeTaken = (1 + distance);
             return new Scenario(
-                nextValve, 
-                ArrayCons(nextValve, this.VisitedValves), 
-                this.TimeLeft - timeTaken, 
-                this.FlowRate + nextValve.FlowRate, 
+                nextValve,
+                ArrayCons(nextValve, this.VisitedValves),
+                this.TimeLeft - timeTaken,
+                this.FlowRate + nextValve.FlowRate,
                 this.CurrentPressureReleased + this.FlowRate * timeTaken);
         }
 
         public int TotalPressureRelease => CurrentPressureReleased + FlowRate * TimeLeft;
 
-        public IEnumerable<KeyValuePair<Valve, int>> Options {
+        public IEnumerable<KeyValuePair<Valve, int>> Options
+        {
             get
             {
                 var visitedValves = VisitedValves;
@@ -100,11 +95,13 @@ public class Day16 : Solver {
         public readonly int UpperBoundTotalPressureRelease;
 
         public TwoPlayerScenario(
-            Valve currentValveOne, 
+            Valve currentValveOne,
             Valve currentValveTwo,
             Dictionary<Valve, int> openedValves,
-            int timeLeftOne, 
+            int timeLeftOne,
             int timeLeftTwo) {
+            if (_interestingValves == null) throw new InvalidOperationException();
+
             this.CurrentValveOne = currentValveOne;
             this.CurrentValveTwo = currentValveTwo;
             this.OpenedValves = openedValves;
@@ -120,17 +117,18 @@ public class Day16 : Solver {
             var v1 = CurrentValveOne;
             var t2 = TimeLeftTwo;
             var v2 = CurrentValveTwo;
-            for (var index = 0; index < interestingValves.Length; index++) {
-                var valve = interestingValves[index];
+            for (var index = 0; index < _interestingValves.Length; index++) {
+                var valve = _interestingValves[index];
                 if (!openedValves.ContainsKey(valve))
-                    sum += Math.Max(0, Math.Max(t1 - v1.Distances[valve] - 1, t2 - v2.Distances[valve] - 1)) * valve.FlowRate;
+                    sum += Math.Max(0, Math.Max(t1 - v1.Distances[valve] - 1, t2 - v2.Distances[valve] - 1)) *
+                           valve.FlowRate;
             }
 
             this.UpperBoundTotalPressureRelease = sum;
         }
     }
 
-    public override long SolvePartOne() {
+    protected override long SolvePartOne() {
         var valves = InitializeValves();
 
         var completeScenarios = new List<Scenario>();
@@ -166,14 +164,15 @@ public class Day16 : Solver {
         return bestScenario.TotalPressureRelease;
     }
 
-    public override long SolvePartTwo() {
+    protected override long SolvePartTwo() {
         var valves = InitializeValves();
-        interestingValves = valves.Where(v => v.FlowRate > 0).ToArray();
+        _interestingValves = valves.Where(v => v.FlowRate > 0).ToArray();
 
         var i = 0;
-        
+
         var currentValve = valves.Single(v => v.Label == "AA");
-        var initialScenario = new TwoPlayerScenario(currentValve, currentValve, new Dictionary<Valve, int> { { currentValve, 0 } }, 26, 26);
+        var initialScenario = new TwoPlayerScenario(currentValve, currentValve,
+            new Dictionary<Valve, int> { { currentValve, 0 } }, 26, 26);
         var scenarios = new[] { initialScenario };
         int lowerBound = 0;
 
@@ -185,12 +184,14 @@ public class Day16 : Solver {
             scenarios.AsParallel()
                 .ForAll(scenario => {
                     var ro2 = 0;
-                    
+
                     foreach (var op1 in scenario.CurrentValveOne.Distances) {
-                        if (op1.Value > scenario.TimeLeftOne - 2 || scenario.OpenedValves.ContainsKey(op1.Key)) continue;
+                        if (op1.Value > scenario.TimeLeftOne - 2 || scenario.OpenedValves.ContainsKey(op1.Key))
+                            continue;
 
                         foreach (var op2 in scenario.CurrentValveTwo.Distances) {
-                            if (op2.Value > scenario.TimeLeftTwo - 2 || op2.Key == op1.Key || scenario.OpenedValves.ContainsKey(op2.Key)) continue;
+                            if (op2.Value > scenario.TimeLeftTwo - 2 || op2.Key == op1.Key ||
+                                scenario.OpenedValves.ContainsKey(op2.Key)) continue;
                             ro2++;
 
                             var timeLeftOne = scenario.TimeLeftOne - op1.Value - 1;
@@ -259,7 +260,7 @@ public class Day16 : Solver {
         return r;
     }
 
-    private const string? ExampleInput = @"
+    private const string ExampleInput = @"
 Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
 Valve BB has flow rate=13; tunnels lead to valves CC, AA
 Valve CC has flow rate=2; tunnels lead to valves DD, BB
@@ -274,18 +275,19 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 
     [Fact]
     public void ParsesCorrectly() {
-        Assert.Equal(ExampleInput, "\r\n" + string.Join("\r\n", ParseValves(ExampleInput!).Select(v => v.ToString())) + "\r\n");
+        Assert.Equal(ExampleInput,
+            "\r\n" + string.Join("\r\n", ParseValves(ExampleInput).Select(v => v.ToString())) + "\r\n");
     }
 
     [Fact]
     public void SolvesPartOneExample() {
-        var actual = new Day16(ExampleInput).SolvePartOne();
+        var actual = new Day16(ExampleInput, Output).SolvePartOne();
         Assert.Equal(1651, actual);
     }
 
     [Fact]
     public void SolvesPartTwoExample() {
-        var actual = new Day16(ExampleInput).SolvePartTwo();
+        var actual = new Day16(ExampleInput, Output).SolvePartTwo();
         Assert.Equal(1707, actual);
     }
 
