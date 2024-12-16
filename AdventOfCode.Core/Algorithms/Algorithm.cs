@@ -63,4 +63,74 @@ public static class Algorithm {
 
         throw new InvalidOperationException("No route found");
     }
+    
+    public static IEnumerable<T[]> AllStars<T>(
+        T startNode,
+        Func<T, IEnumerable<(T, int)>> connections,
+        Func<T, int> heuristic,
+        Func<T, bool> isGoal) where T : struct {
+        // the prioritised queue of where to explore next
+        var queue = new PriorityQueue<T, int>();
+        queue.Enqueue(startNode, heuristic(startNode));
+
+        // the set of all predecessors (for reconstruction)
+        var predecessors = new Dictionary<T, HashSet<T>>();
+
+        // the working set of minimum costs to the node
+        var workingCosts = new Dictionary<T, int> {
+            { startNode, 0 }
+        };
+        
+        // the minimum path length and goal set
+        var minimumCost = default(int?);
+        var goalNodes = new HashSet<T>();
+
+        // consume the queue in priority order until we find a goal
+        while (queue.TryDequeue(out var currentNode, out _)) {
+            var currentCost = workingCosts[currentNode];
+
+            // if we are already above the minimum length, give up
+            if (minimumCost < currentCost)
+                continue;
+            
+            // record a new goal reached
+            if (isGoal(currentNode)) {
+                minimumCost = currentCost;
+                goalNodes.Add(currentNode);
+                continue;
+            }
+
+            // consider the possible edge traversals
+            foreach (var (node, edgeCost) in connections(currentNode)) {
+                var tentativeCost = currentCost + edgeCost;
+
+                // check if this path is not worse than any we've seen before
+                if (workingCosts.TryGetValue(node, out var workingCost)
+                    && tentativeCost > workingCost)
+                    continue;
+
+                // update our working costs and predecessor map
+                workingCosts[node] = tentativeCost;
+                if (!predecessors.ContainsKey(node))
+                    predecessors[node] = [];    
+                predecessors[node].Add(currentNode);
+
+                // this is the 'magic' part, where we prioritise the next nodes
+                // based on the heuristic estimate of the cost to the goal
+                queue.Enqueue(node, tentativeCost + heuristic(node));
+            }
+        }
+
+        return goalNodes.SelectMany(Reconstruct);
+
+        IEnumerable<T[]> Reconstruct(T node) {
+            foreach (var predecessor in predecessors[node]) {
+                if (!predecessors.ContainsKey(predecessor)) 
+                    yield return [predecessor]; 
+                else  
+                    foreach (var reconstruction in Reconstruct(predecessor))
+                        yield return reconstruction.Concat([node]).ToArray();
+            }
+        }
+    }
 }
