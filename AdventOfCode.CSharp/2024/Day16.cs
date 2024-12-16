@@ -45,8 +45,18 @@ public class Day16 : Solver {
         return minCost;
     }
 
-    protected override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    protected override long SolvePartTwo() {
+        var paths = Algorithm.AllStars(initialState, Connections, Heuristic, IsGoal);
+        var tilesOnAtLeastOneBestPath = paths.SelectMany(p => p).DistinctBy(p => (p.x, p.y)).ToArray();
+        
+        foreach (var tile in tilesOnAtLeastOneBestPath )
+            grid[tile.y, tile.x] = 'O';
 
+        Trace.WriteLine(grid.Render());
+        
+        return tilesOnAtLeastOneBestPath.Length;
+    }
+    
     private IEnumerable<((int x, int y, Directions heading), int)> Connections(
         (int x, int y, Directions heading) state) {
 
@@ -139,6 +149,14 @@ public class Day16 : Solver {
     [InlineData(ExampleInput2, 11048)]
     public void SolvesPartOneExample(string input, int expected) {
         var actual = new Day16(input, Output).SolvePartOne();
+        Assert.Equal(expected, actual);
+    }
+    
+    [Theory]
+    [InlineData(ExampleInput1, 45)]
+    [InlineData(ExampleInput2, 64)]
+    public void SolvesPartTwoExample(string input, int expected) {
+        var actual = new Day16(input, Output).SolvePartTwo();
         Assert.Equal(expected, actual);
     }
 }
