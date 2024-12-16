@@ -1,12 +1,13 @@
-﻿using Xunit;
+﻿using AdventOfCode.Core;
+using AdventOfCode.Core.Output;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2022;
 
-public class Day20 : Solver {
-    public Day20(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) { }
-
-    public override long SolvePartOne() {
+public class Day20(string? input = null, ITestOutputHelper? outputHelper = null)
+    : Solver(input, outputHelper) {
+    protected override long SolvePartOne() {
         var offsets = Input.SplitInt().Select(i => (long)i).ToArray();
         var indexes = Enumerable.Range(0, offsets.Length).ToArray();
         var contents = offsets.ToArray();
@@ -20,7 +21,7 @@ public class Day20 : Solver {
         return GetGroveCoords(offsets, indexes, contents);
     }
 
-    public override long SolvePartTwo() {
+    protected override long SolvePartTwo() {
         var offsets = Input.SplitInt().Select(i => i * 811589153L).ToArray();
         var indexes = Enumerable.Range(0, offsets.Length).ToArray();
         var contents = offsets.ToArray();
@@ -29,7 +30,7 @@ public class Day20 : Solver {
         Trace.WriteLine(string.Join(", ", offsets));
         Trace.WriteLine();
 
-        for (var k = 0; k < 10; ++k ) {
+        for (var k = 0; k < 10; ++k) {
             Mix(offsets, indexes, contents);
 
             Trace.WriteLine($"After {k} rounds of mixing:");
@@ -51,7 +52,7 @@ public class Day20 : Solver {
             }
             else {
                 var oldIndex = indexes[i];
-                var newIndex = (int) ((oldIndex + offsets[i]) % m + m) % m;
+                var newIndex = (int)((oldIndex + offsets[i]) % m + m) % m;
 
                 // handle the special first case
                 if (newIndex == 0) newIndex = m;
@@ -59,16 +60,14 @@ public class Day20 : Solver {
                 if (newIndex == oldIndex) continue;
 
                 // number moving right, wake moving left
-                if (oldIndex < newIndex)
-                {
+                if (oldIndex < newIndex) {
                     for (var j = 0; j < c; ++j)
                         if (oldIndex < indexes[j] && indexes[j] <= newIndex)
                             indexes[j]--;
                 }
 
                 // number moving left, wake moving right
-                if (newIndex < oldIndex)
-                {
+                if (newIndex < oldIndex) {
                     for (var j = 0; j < c; ++j)
                         if (newIndex <= indexes[j] && indexes[j] < oldIndex)
                             indexes[j]++;
@@ -97,9 +96,9 @@ public class Day20 : Solver {
         var _2000 = contents[(newZeroPosition + 2000 + c) % c];
         var _3000 = contents[(newZeroPosition + 3000 + c) % c];
 
-        Output.WriteLine($"1000th number is {_1000}");
-        Output.WriteLine($"2000th number is {_2000}");
-        Output.WriteLine($"3000th number is {_3000}");
+        Trace.WriteLine($"1000th number is {_1000}");
+        Trace.WriteLine($"2000th number is {_2000}");
+        Trace.WriteLine($"3000th number is {_3000}");
         return _1000 + _2000 + _3000;
     }
 
@@ -118,6 +117,7 @@ public class Day20 : Solver {
         var actual = new Day20(ExampleInput, Output).SolvePartOne();
         Assert.Equal(3, actual);
     }
+
     [Fact]
     public void SolvesPartTwoExample() {
         var actual = new Day20(ExampleInput, Output).SolvePartTwo();
