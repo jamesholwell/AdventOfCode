@@ -26,7 +26,7 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
     private void exec(Instructions instruction, int operand) {
         switch (instruction) {
             case Instructions.adv:
-                registerA /= 1 << (int)combo(operand);
+                registerA >>= (int)combo(operand);
                 break;
 
             case Instructions.bxl:
@@ -53,11 +53,11 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
                 break;
             
             case Instructions.bdv:
-                registerB = registerA / (1 << (int)combo(operand));
+                registerB = registerA >> (int)combo(operand);
                 break;
 
             case Instructions.cdv:
-                registerC = registerA / (1 << (int)combo(operand));
+                registerC = registerA >> (int)combo(operand);
                 break;
             
             default:
@@ -97,16 +97,16 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
         };
 
         var narrative = instruction switch {
-            Instructions.adv when operand is >=4 and <= 6 => $"a := a / 2^{comboOperand})",
-            Instructions.adv => $"a := a / {1 << operand}",
+            Instructions.adv when operand is >= 4 and <= 6 => $"a := a >> {comboOperand}",
+            Instructions.adv => $"a := a >> {operand}",
             Instructions.bxl => $"b := b ^ {operand}",
             Instructions.bst => $"b := {comboOperand} % 8",
             Instructions.jnz when registerA == 0 => "quit",
             Instructions.jnz => $"jmp {operand}",
             Instructions.bxc => $"b := b ^ c",
             Instructions.@out => $"out {comboOperand} % 8",
-            Instructions.bdv => $"b := a / (1 << {comboOperand})",
-            Instructions.cdv => $"c := a / (1 << {comboOperand})",
+            Instructions.bdv => $"b := a >> {comboOperand}",
+            Instructions.cdv => $"c := a >> {comboOperand}",
             _ => string.Empty
         };
 
