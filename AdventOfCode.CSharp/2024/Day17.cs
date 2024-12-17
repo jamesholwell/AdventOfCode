@@ -1,0 +1,181 @@
+// ReSharper disable InconsistentNaming
+using AdventOfCode.Core;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace AdventOfCode.CSharp._2024;
+
+public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
+    : Solver<string>(input, outputHelper) {
+    private int registerA;
+    private int registerB;
+    private int registerC;
+    private readonly List<int> output = [];
+    private int[] program = [];
+    private int pointer;
+
+    private static (int registerA, int registerB, int registerC, int[] program) Parse(string input) {
+        var lines = Shared.Split(input);
+        return (
+            int.Parse(lines[0]["Register A: ".Length..]), 
+            int.Parse(lines[1]["Register B: ".Length..]), 
+            int.Parse(lines[2]["Register C: ".Length..]), 
+            lines[4]["Program: ".Length..].SplitInt(","));
+    }
+
+    private void exec(Instructions instruction, int operand) {
+        switch (instruction) {
+            case Instructions.adv:
+                registerA /= 1 << combo(operand);
+                break;
+
+            case Instructions.bxl:
+                registerB ^= operand;
+                break;
+
+            case Instructions.bst:
+                registerB = combo(operand) % 8;
+                break;
+
+            case Instructions.jnz:
+                if (registerA == 0) 
+                    break;
+
+                pointer = operand;
+                return;
+                
+            case Instructions.bxc:
+                registerB ^= registerC;
+                break;
+
+            case Instructions.@out:
+                output.Add(combo(operand) % 8);
+                break;
+            
+            case Instructions.bdv:
+                registerB = registerA / (1 << combo(operand));
+                break;
+
+            case Instructions.cdv:
+                registerC = registerA / (1 << combo(operand));
+                break;
+            
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+        pointer += 2;
+        return;
+
+        int combo(int code) => code switch {
+            4 => registerA,
+            5 => registerB,
+            6 => registerC,
+            7 => throw new InvalidOperationException(),
+            _ => code
+        };
+    }
+
+    protected override string SolvePartOne() {
+        (registerA, registerB, registerC, program) = Parse(Input);
+
+        while (true) {
+            if (pointer > program.Length - 2) 
+                break;
+
+            var instruction = (Instructions)program[pointer];
+            var operand = program[pointer + 1];
+            exec(instruction, operand);
+        }
+
+        return string.Join(",", output);
+    }
+
+    protected override string SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+
+    public enum Instructions : byte {
+        adv = 0,
+        bxl = 1,
+        bst = 2,
+        jnz = 3,
+        bxc = 4,
+        @out = 5,
+        bdv = 6,
+        cdv = 7
+    }
+
+    private const string ExampleInput = 
+        """
+        Register A: 729
+        Register B: 0
+        Register C: 0
+        
+        Program: 0,1,5,4,3,0
+        """;
+
+    [Fact]
+    public void ParsesInputCorrectly() {
+        var actual = Parse(ExampleInput);
+        Assert.Equal(729, actual.registerA);
+        Assert.Equal(0, actual.registerB);
+        Assert.Equal(0, actual.registerC);
+        Assert.Equal([0, 1, 5, 4, 3, 0], actual.program);
+    }
+    
+    [Theory]
+    [InlineData(Instructions.adv, 2, 256, 0, 0, 256 / 4, 0, 0)]
+    [InlineData(Instructions.adv, 5, 643, 3, 0, 643 / 8, 3, 0)]
+    [InlineData(Instructions.bdv, 2, 256, 0, 0, 256, 256 / 4, 0)]
+    [InlineData(Instructions.bdv, 5, 643, 3, 0, 643, 643 / 8, 0)]
+    [InlineData(Instructions.cdv, 2, 256, 0, 0, 256, 0, 256 / 4)]
+    [InlineData(Instructions.cdv, 5, 643, 3, 0, 643, 3, 643 / 8)]
+    public void CalculatesDivisionCorrectly(Instructions instruction, int operand, int a, int b, int c, int expectedA, int expectedB, int expectedC) {
+        registerA = a;
+        registerB = b;
+        registerC = c;
+        
+        exec(instruction, operand);
+        
+        Assert.Equal(expectedA, registerA);
+        Assert.Equal(expectedB, registerB);
+        Assert.Equal(expectedC, registerC);
+    }
+    
+    [Theory]
+    [InlineData(0, 0, 9, "2,6", null, 1, null, null)]
+    [InlineData(10, 0, 0, "5,0,5,1,5,4", null, null, null, "0,1,2")]
+    [InlineData(2024, 0, 0, "0,1,5,4,3,0", 0, null, null, "4,2,5,6,7,7,7,7,3,1,0")]
+    [InlineData(0, 29, 0, "1,7", null, 26, null, null)]
+    [InlineData(0, 2024, 43690, "4,0", null, 44354, null, null)]
+    public void CalculatesExamples(int a, int b, int c, string prog, int? expectedA, int? expectedB, int? expectedC, string? expectedOutput) {
+        var input = 
+            $"""
+             Register A: {a}
+             Register B: {b}
+             Register C: {c}
+
+             Program: {prog}
+             """;
+
+        var solver = new Day17(input, Output);
+        var actual = solver.SolvePartOne();
+        
+        if (expectedA.HasValue)
+            Assert.Equal(expectedA, solver.registerA);
+        
+        if (expectedB.HasValue)
+            Assert.Equal(expectedB, solver.registerB);
+        
+        if (expectedC.HasValue)
+            Assert.Equal(expectedC, solver.registerC);
+        
+        if (expectedOutput != null)
+            Assert.Equal(expectedOutput, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartOneExample() {
+        var actual = new Day17(ExampleInput, Output).SolvePartOne();
+        Assert.Equal("4,6,3,5,6,3,5,2,1,0", actual);
+    }
+}
