@@ -7,9 +7,9 @@ namespace AdventOfCode.CSharp._2024;
 
 public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
     : Solver<string>(input, outputHelper) {
-    private int registerA;
-    private int registerB;
-    private int registerC;
+    private long registerA;
+    private long registerB;
+    private long registerC;
     private readonly List<int> output = [];
     private int[] program = [];
     private int pointer;
@@ -26,7 +26,7 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
     private void exec(Instructions instruction, int operand) {
         switch (instruction) {
             case Instructions.adv:
-                registerA /= 1 << combo(operand);
+                registerA /= 1 << (int)combo(operand);
                 break;
 
             case Instructions.bxl:
@@ -49,15 +49,15 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
                 break;
 
             case Instructions.@out:
-                output.Add(combo(operand) % 8);
+                output.Add((int)(combo(operand) % 8));
                 break;
             
             case Instructions.bdv:
-                registerB = registerA / (1 << combo(operand));
+                registerB = registerA / (1 << (int)combo(operand));
                 break;
 
             case Instructions.cdv:
-                registerC = registerA / (1 << combo(operand));
+                registerC = registerA / (1 << (int)combo(operand));
                 break;
             
             default:
@@ -67,7 +67,7 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
         pointer += 2;
         return;
 
-        int combo(int code) => code switch {
+        long combo(int code) => code switch {
             4 => registerA,
             5 => registerB,
             6 => registerC,
@@ -113,6 +113,15 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
         Program: 0,1,5,4,3,0
         """;
 
+    private const string ExampleInputPartTwo = 
+        """
+        Register A: 2024
+        Register B: 0
+        Register C: 0
+        
+        Program: 0,3,5,4,3,0
+        """;
+    
     [Fact]
     public void ParsesInputCorrectly() {
         var actual = Parse(ExampleInput);
@@ -161,13 +170,13 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
         var actual = solver.SolvePartOne();
         
         if (expectedA.HasValue)
-            Assert.Equal(expectedA, solver.registerA);
+            Assert.Equal(expectedA, (int)solver.registerA);
         
         if (expectedB.HasValue)
-            Assert.Equal(expectedB, solver.registerB);
+            Assert.Equal(expectedB, (int)solver.registerB);
         
         if (expectedC.HasValue)
-            Assert.Equal(expectedC, solver.registerC);
+            Assert.Equal(expectedC, (int)solver.registerC);
         
         if (expectedOutput != null)
             Assert.Equal(expectedOutput, actual);
@@ -177,5 +186,11 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
     public void SolvesPartOneExample() {
         var actual = new Day17(ExampleInput, Output).SolvePartOne();
         Assert.Equal("4,6,3,5,6,3,5,2,1,0", actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day17(ExampleInputPartTwo, Output).SolvePartTwo();
+        Assert.Equal("117440", actual);
     }
 }
