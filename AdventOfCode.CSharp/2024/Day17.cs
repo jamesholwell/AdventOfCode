@@ -133,7 +133,27 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
         return string.Join(",", output);
     }
 
-    protected override string SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    protected override string SolvePartTwo() {
+        (_, _, _, program) = Parse(Input);
+        var i = -1L;
+        
+        while (!output.SequenceEqual(program)) {
+            registerA = ++i;
+            registerB = 0;
+            registerC = 0;
+            pointer = 0;
+            output.Clear();
+
+            while (true) {
+                if (pointer > program.Length - 1)
+                    break;
+
+                exec((Instructions)program[pointer], program[pointer + 1]);
+            }
+        }
+
+        return i.ToString();
+    }
 
     public enum Instructions : byte {
         adv = 0,
