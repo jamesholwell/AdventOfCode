@@ -76,16 +76,58 @@ public class Day17(string? input = null, ITestOutputHelper? outputHelper = null)
         };
     }
 
+    private string PrepareTraceMessage() {
+        var a = registerA;
+        var b = registerB;
+        var c = registerC;
+        var ap = string.Join(string.Empty, program.Select((p, i) => 
+            i == pointer ? $"[{p} " :
+            i == pointer + 1 ? $"{p}]" : 
+            i % 2 == 0 ? $" {p} " : $"{p} "));
+        if (ap.Length < 10) ap += new string(' ', 10-ap.Length);
+
+        var instruction = (Instructions)program[pointer];
+        var operand = program[pointer + 1];
+        var comboOperand = operand switch {
+            4 => "a",
+            5 => "b",
+            6 => "c",
+            7 => "!!!",
+            _ => $"{operand}"
+        };
+
+        var narrative = instruction switch {
+            Instructions.adv when operand is >=4 and <= 6 => $"a := a / 2^{comboOperand})",
+            Instructions.adv => $"a := a / {1 << operand}",
+            Instructions.bxl => $"b := b ^ {operand}",
+            Instructions.bst => $"b := {comboOperand} % 8",
+            Instructions.jnz when registerA == 0 => "quit",
+            Instructions.jnz => $"jmp {operand}",
+            Instructions.bxc => $"b := b ^ c",
+            Instructions.@out => $"out {comboOperand} % 8",
+            Instructions.bdv => $"b := a / (1 << {comboOperand})",
+            Instructions.cdv => $"c := a / (1 << {comboOperand})",
+            _ => string.Empty
+        };
+
+        return
+            $"{ap}   " + 
+            $"{instruction.ToString()} {operand}   " +
+            $"{narrative}{new string(' ', narrative.Length > 20 ? 0 : 20 - narrative.Length)}" +
+            $"| {a,10} | {b,10} | {c,10} | ";
+    }
+    
     protected override string SolvePartOne() {
         (registerA, registerB, registerC, program) = Parse(Input);
 
-        while (true) {
-            if (pointer > program.Length - 2) 
-                break;
-
-            var instruction = (Instructions)program[pointer];
-            var operand = program[pointer + 1];
-            exec(instruction, operand);
+        Trace.WriteLine($"program{new string(' ', program.Length < 4 ? 3 : (program.Length * 5)/2 - 7)}   op      narrative           | register a | register b | register c | output");
+        Trace.WriteLine($"-------{new string('-', program.Length < 4 ? 3 : (program.Length * 5)/2 - 7)}-------------------------------|------------|------------|------------|-----------------");
+        while (pointer < program.Length) {
+            var traceMessage = PrepareTraceMessage();
+            
+            exec((Instructions)program[pointer], program[pointer + 1]);
+                
+            Trace.WriteLine(traceMessage + string.Join(",", output));
         }
 
         return string.Join(",", output);
