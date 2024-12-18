@@ -1,6 +1,6 @@
 ﻿namespace AdventOfCode.Core.Algorithms;
 
-public static class Algorithm {
+public static partial class Algorithm {
     /// <summary>
     ///     A* (pronounced "A-star") is a graph traversal and path search algorithm
     /// </summary>
