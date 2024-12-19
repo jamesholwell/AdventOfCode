@@ -13,6 +13,8 @@ public class Day19 : Solver {
 
     private readonly HashSet<string> impossibleCache = [];
 
+    private readonly Dictionary<string, long> possibilitiesCache = new();
+
     public Day19(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) {
         if (input == null) {
             // allow empty constructor from test runner
@@ -63,9 +65,41 @@ public class Day19 : Solver {
         return false;
     }
 
+    private long Possibilities(string design) {
+        if (possibilitiesCache.TryGetValue(design, out var count))
+            return count;
+
+        return possibilitiesCache[design] = PossibilitiesInner(design);
+    }
+
+    private long PossibilitiesInner(string design) {
+        var possibilities = 0L;
+        
+        for (int i = 0, ci = patterns.Length; i < ci; ++i) {
+            var pattern = patterns[i];
+
+            if (pattern == design) {
+                possibilities++;
+                continue;
+            }
+
+            if (pattern.Length > design.Length)
+                continue;
+
+            for (int j = 0, cj = pattern.Length; j < cj; ++j)
+                if (pattern[j] != design[j])
+                    goto NoMatch;
+
+            possibilities += Possibilities(design[pattern.Length..]);
+            NoMatch: ;
+        }
+
+        return possibilities;
+    }
+
     protected override long SolvePartOne() => designs.Count(IsPossible);
 
-    protected override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    protected override long SolvePartTwo() => designs.Sum(Possibilities);
 
     private const string ExampleInput =
         """
@@ -108,5 +142,11 @@ public class Day19 : Solver {
     public void SolvesPartOneExample() {
         var actual = new Day19(ExampleInput, Output).SolvePartOne();
         Assert.Equal(6, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day19(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(16, actual);
     }
 }
