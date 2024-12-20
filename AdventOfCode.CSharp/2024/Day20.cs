@@ -7,19 +7,56 @@ using Xunit.Abstractions;
 
 namespace AdventOfCode.CSharp._2024;
 
-public class Day20(string? input = null, ITestOutputHelper? outputHelper = null)
-    : Solver(input, outputHelper) {
-    protected override long SolvePartOne() {
-        var grid = Input.SplitGrid();
+public class Day20 : Solver {
+    private readonly HashSet<(int x, int y)> spaces;
+
+    private readonly Dictionary<(int x, int y), int> dijkstra;
+    
+    private int minimumCheatSavingsForResult = 100;
+    
+    private readonly int fastestTime;
+
+    public Day20(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) {
+        if (input == null) {
+            spaces = new HashSet<(int, int)>();
+            dijkstra = new Dictionary<(int, int), int>();
+            return;
+        }
+        
+        var grid = input.SplitGrid();
         var start = grid.Find('S');
         var end = grid.Find('E');
         var coordinates = grid.Where(c => c == '.').Union([start, end]).ToArray();
-        var spaces = new HashSet<(int,int)>(coordinates);
         
-        var dijkstra = Algorithm.Dijkstra(start, coordinates, p => p, ConnectionFunc);
+        spaces = [..coordinates];
+        dijkstra = Algorithm.Dijkstra(start, coordinates, p => p, ConnectionFunc);
+        fastestTime = dijkstra[end];
         
-        var fastestTimeWithoutCheating = dijkstra[end];
-        Trace.WriteLine($"Fastest time without cheating: {fastestTimeWithoutCheating}");
+        return;
+
+        IEnumerable<((int x, int y), int cost)> ConnectionFunc((int x, int y) node) {
+            if (spaces.Contains(node.Up())) yield return (node.Up(), 1);
+            if (spaces.Contains(node.Right())) yield return (node.Right(), 1);
+            if (spaces.Contains(node.Down())) yield return (node.Down(), 1);
+            if (spaces.Contains(node.Left())) yield return (node.Left(), 1);
+        }
+    }
+
+    protected override long SolvePartOne() {
+        Trace.WriteLine($"Fastest time without cheating: {fastestTime}");
+
+        var possibleCheats = spaces.SelectMany(CheatOptions).ToArray();
+        Trace.WriteLine($"Discovered {possibleCheats.Length} possible cheats");
+
+        var cheatSavings = possibleCheats
+            .Select(pc => (cheat: pc, savings: dijkstra[pc.end] - dijkstra[pc.start] - 2))
+            .Where(cs => cs.savings > 0)
+            .ToArray();
+        
+        foreach (var group in cheatSavings.GroupBy(ch => ch.savings).OrderBy(g => g.Key))
+            Trace.WriteLine($" - There are {group.Count()} cheats that save {group.Key} picoseconds.");
+
+        return cheatSavings.Count(cs => cs.savings >= minimumCheatSavingsForResult);
         
         /*
          * Cheats look like:
@@ -34,28 +71,7 @@ public class Day20(string? input = null, ITestOutputHelper? outputHelper = null)
          *  and 2 is the second pico-second re-entering the track.
          *
          *  If you don't glitch through a wall, it's not a very good cheat
-         *
          */
-        var possibleCheats = coordinates.SelectMany(CheatOptions).ToArray();
-        Trace.WriteLine($"Discovered {possibleCheats.Length} possible cheats");
-
-        var cheatSavings = possibleCheats
-            .Select(pc => (cheat: pc, savings: dijkstra[pc.end] - dijkstra[pc.start] - 2))
-            .Where(cs => cs.savings > 0)
-            .ToArray();
-        
-        foreach (var group in cheatSavings.GroupBy(ch => ch.savings).OrderBy(g => g.Key))
-            Trace.WriteLine($" - There are {group.Count()} cheats that save {group.Key} picoseconds.");
-
-        return cheatSavings.Count(cs => cs.savings >= 100);
-        
-        IEnumerable<((int x, int y), int cost)> ConnectionFunc((int x, int y) node) {
-            if (spaces.Contains(node.Up())) yield return (node.Up(), 1);
-            if (spaces.Contains(node.Right())) yield return (node.Right(), 1);
-            if (spaces.Contains(node.Down())) yield return (node.Down(), 1);
-            if (spaces.Contains(node.Left())) yield return (node.Left(), 1);
-        }
-        
         IEnumerable<((int x, int y) start, (int x, int y) end)> CheatOptions((int x, int y) node) {
             var upIsWall = !spaces.Contains(node.Up());
             var rightIsWall = !spaces.Contains(node.Right());
@@ -74,7 +90,28 @@ public class Day20(string? input = null, ITestOutputHelper? outputHelper = null)
         }
     }
 
-    protected override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    protected override long SolvePartTwo() {
+        var possibleCheats = spaces.SelectMany(CheatOptions).ToArray();
+        Trace.WriteLine($"Discovered {possibleCheats.Length} possible cheats");
+
+        var cheatSavings = possibleCheats
+            .Select(pc => (cheat: pc, savings: dijkstra[pc.end] - dijkstra[pc.start] - pc.distance))
+            .Where(cs => cs.savings > 0)
+            .ToArray();
+        
+        foreach (var group in cheatSavings.GroupBy(ch => ch.savings).OrderBy(g => g.Key))
+            Trace.WriteLine($" - There are {group.Count()} cheats that save {group.Key} picoseconds.");
+
+        return cheatSavings.Count(cs => cs.savings >= minimumCheatSavingsForResult);
+        
+        IEnumerable<((int x, int y) start, (int x, int y) end, int distance)> CheatOptions((int x, int y) start) {
+            return spaces
+                .Where(s => Math.Abs(start.x - s.x) + Math.Abs(start.y - s.y) <= 20)
+                .Select(s => (end: s, distance: Math.Abs(start.x - s.x) + Math.Abs(start.y - s.y)))
+                .Select(s => (start, s.end, s.distance))
+                .ToArray();
+        }
+    }
 
     private const string? ExampleInput = 
         """
@@ -97,7 +134,21 @@ public class Day20(string? input = null, ITestOutputHelper? outputHelper = null)
 
     [Fact]
     public void SolvesPartOneExample() {
-        var actual = new Day20(ExampleInput, Output).SolvePartOne();
-        Assert.Equal(0, actual);
+        var solver = new Day20(ExampleInput, Output) {
+            minimumCheatSavingsForResult = 50
+        };
+
+        var actual = solver.SolvePartOne();
+        Assert.Equal(1, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var solver = new Day20(ExampleInput, Output) {
+            minimumCheatSavingsForResult = 50
+        };
+
+        var actual = solver.SolvePartTwo();
+        Assert.Equal(285, actual);
     }
 }
