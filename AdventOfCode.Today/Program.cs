@@ -52,7 +52,8 @@ if (!File.Exists(path)) {
 var input = File.ReadAllText(path);
 
 // instantiate the solver
-var solver = (ISolver)constructor.Invoke([input, new ConsoleOutputHelper()]);
+var isTracing = args.Any(a => string.Equals(a, "--trace", StringComparison.OrdinalIgnoreCase));
+var solver = (ISolver)constructor.Invoke([input, isTracing ? new TracingConsoleOutputHelper() : new ConsoleOutputHelper()]);
 
 var output =
     args.Any(a => string.Equals(a, "pt2", StringComparison.OrdinalIgnoreCase))
