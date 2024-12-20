@@ -1,7 +1,8 @@
 ﻿function global:aoc {
     Param([parameter(ValueFromRemainingArguments = $true)][string[]]$args)
 
-    if ($args.count -eq 0 -or $args[0] -eq "pt2") {
+    $disallowedargs = $args | where { -not (@("pt2", "--trace") -contains $_) }
+    if ($disallowedargs.length -eq 0) {
         dotnet run --property WarningLevel=0 --project .\AdventOfCode.Today @args        
         return;
     }
