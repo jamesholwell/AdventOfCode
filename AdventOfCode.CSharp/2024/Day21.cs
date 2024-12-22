@@ -8,6 +8,8 @@ namespace AdventOfCode.CSharp._2024;
 public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
     : Solver(input, outputHelper) {
     private readonly ILookup<(char from, char to),string> numericPaths = CreateAllNumericPaths();
+    
+    private readonly Dictionary<(char, char, int), long> minimumLengthCache = [];
 
     /// <summary>
     ///     Gets the coordinate of the door button
@@ -160,21 +162,47 @@ public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
         return candidate;
     }
 
-    [Theory]
-    [InlineData("029A", "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A")]
-    [InlineData("980A", "<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A")]
-    [InlineData("179A", "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A")]
-    [InlineData("456A", "<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A")]
-    [InlineData("379A", "<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A")]
-    public void SolvesEachLengthOfPartOne(string input, string expected) {
-        var actual = new string(Solve(input));
-        Trace.WriteLine(expected);
-        Trace.WriteLine(actual);
-        Assert.Equal(expected.Length, actual.Length);    
+    private long SolvePartTwo(string code) => 
+        PressesForCode(code)
+            .Min(p => new[] { 'A' }.Concat(p).Pairwise()
+                .Sum(pair => MinimumLength(pair.Item1, pair.Item2, 25)));
+
+    private long MinimumLength(char curr, char next, int remainingEncodings) {
+        if (minimumLengthCache.TryGetValue((curr, next, remainingEncodings), out var value))
+            return value;
+        
+        return minimumLengthCache[(curr, next, remainingEncodings)] = MinimumLengthInner(curr, next, remainingEncodings);
     }
-    
+
+    private long MinimumLengthInner(char curr, char next, int remainingEncodings) => 
+        remainingEncodings == 0 ? 1 : 
+            DirectionalPresses(curr, next).Select(d => new[] { 'A' }.Concat(d).Concat(['A']).Pairwise()).Select(steps => steps.Sum(p => MinimumLength(p.Item1, p.Item2, remainingEncodings - 1))).Min();
+
+    /*
+    private long DebuggableMinimumLengthInner(char curr, char next, int remainingEncodings) {
+        if (remainingEncodings == 0)
+            return 1;
+
+        var directionalPresses = DirectionalPresses(curr, next);
+        var min = long.MaxValue;
+        foreach (var d in directionalPresses) {
+            var length = 0L;
+            var steps = new[] { 'A' }.Concat(d).Concat(new[] { 'A' }).Pairwise();
+            
+            foreach (var p in steps)
+                length += MinimumLength(p.Item1, p.Item2, remainingEncodings - 1);
+
+            if (length < min)
+                min = length;
+        }
+
+        return min;
+    }
+    */
+
     protected override long SolvePartOne() => Shared.Split(Input).Sum(code => int.Parse(code[..^1]) * Solve(code).Length);
-    protected override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+
+    protected override long SolvePartTwo() => Shared.Split(Input).Sum(code => int.Parse(code[..^1]) * SolvePartTwo(code));
 
     private const string? ExampleInput = 
         """
@@ -194,7 +222,7 @@ public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
         
         Assert.NotEmpty(solver.numericPaths);
     }
-    
+
     [Fact]
     public void CalculatePressesForNumericKeypadCorrectly() {
         var actual = PressesForCode("029A");
@@ -205,7 +233,7 @@ public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
         const string expected = "<A^A>^^AvvvA";
         Assert.Contains(expected, actual);
     }
-    
+
     [Theory]
     // ReSharper disable StringLiteralTypo
     [InlineData("<A^A>^^AvvvA", "v<<A>>^A<A>AvA<^AA>A<vAAA>^A")]
@@ -218,10 +246,29 @@ public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
         
         Assert.Contains(expected, actual);
     }
-    
+
+    [Theory]
+    [InlineData("029A", "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A")]
+    [InlineData("980A", "<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A")]
+    [InlineData("179A", "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A")]
+    [InlineData("456A", "<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A")]
+    [InlineData("379A", "<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A")]
+    public void SolvesEachLengthOfPartOne(string input, string expected) {
+        var actual = new string(Solve(input));
+        Trace.WriteLine(expected);
+        Trace.WriteLine(actual);
+        Assert.Equal(expected.Length, actual.Length);    
+    }
+
     [Fact]
     public void SolvesPartOneExample() {
         var actual = new Day21(ExampleInput, Output).SolvePartOne();
         Assert.Equal(126384, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day21(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal(154115708116294, actual);
     }
 }
