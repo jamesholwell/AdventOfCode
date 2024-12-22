@@ -30,13 +30,59 @@ public class Day22(string? input = null, ITestOutputHelper? outputHelper = null)
 
     protected override long SolvePartOne() => Shared.Split(Input).Select(long.Parse).Sum(TwoThousandthEvolution);
 
-    protected override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    private static IEnumerable<int> Prices(long n) {
+        for (var i = 0; i < 2001; ++i) {
+            yield return (int)(n % 10);
+            n = NextSecretNumber(n);
+        }
+    }
+
+    private static (int price, int change) Change(Tuple<int, int> arg) => (arg.Item2, arg.Item2 - arg.Item1);
+
+    private static ((int, int, int, int) changes, int price)[] Windows((int price, int change)[] seq) {
+        var r = new ((int, int, int, int) changes, int price)[seq.Length - 3];
+        
+        for (int i = 3, c = seq.Length; i < c; ++i)
+            r[i - 3] = ((seq[i - 3].change, seq[i - 2].change, seq[i - 1].change, seq[i].change), seq[i].price);
+        
+        return r;
+    }
+
+    protected override long SolvePartTwo() {
+        // parse input to price/change lists
+        var monkeys = 
+            Shared.Split(Input)
+                  .Select(s => Prices(long.Parse(s)).Pairwise().Select(Change).ToArray());
+
+        // determine the individual sequence->price dictionaries
+        var sellingPrices = monkeys.Select(pairs =>
+            Windows(pairs)
+                .Where(p => p.price > 0) // we only care if we can get a half-decent price
+                .GroupBy(p => p.changes)
+                .ToDictionary(p => p.Key, p => p.First().price)).ToArray();
+
+        var allSequences = sellingPrices
+            .SelectMany(d => d.Keys)
+            .Distinct()
+            .ToArray();
+        
+        return allSequences.Max(seq => 
+            sellingPrices.Sum(sp => sp.GetValueOrDefault(seq, 0)));
+    }
 
     private const string? ExampleInput =
         """
         1
         10
         100
+        2024
+        """;
+    
+    private const string? ExampleInputPartTwo =
+        """
+        1
+        2
+        3
         2024
         """;
 
@@ -81,8 +127,49 @@ public class Day22(string? input = null, ITestOutputHelper? outputHelper = null)
     }
 
     [Fact]
+    public void CalculatesFirstTenPricesCorrectly() {
+        int[] expected = [
+            3,
+            0,
+            6,
+            5,
+            4,
+            4,
+            6,
+            4,
+            4,
+            2
+        ];
+
+        Assert.Equal(expected, Prices(123L).Take(10));
+    }
+
+    [Fact]
+    public void CalculatesFirstNineChangesCorrectly() {
+        (int,int)[] expected = [
+            (0, -3),
+            (6, 6),
+            (5, -1),
+            (4, -1),
+            (4, 0),
+            (6, 2),
+            (4, -2),
+            (4, 0),
+            (2, -2)
+        ];
+
+        Assert.Equal(expected, Prices(123L).Take(10).Pairwise().Select(Change));
+    }
+
+    [Fact]
     public void SolvesPartOneExample() {
         var actual = new Day22(ExampleInput, Output).SolvePartOne();
         Assert.Equal(37327623, actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day22(ExampleInputPartTwo, Output).SolvePartTwo();
+        Assert.Equal(23, actual);
     }
 }
