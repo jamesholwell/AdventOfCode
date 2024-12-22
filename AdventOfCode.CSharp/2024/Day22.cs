@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using AdventOfCode.Core;
 using Xunit;
@@ -39,12 +40,18 @@ public class Day22(string? input = null, ITestOutputHelper? outputHelper = null)
 
     private static (int price, int change) Change(Tuple<int, int> arg) => (arg.Item2, arg.Item2 - arg.Item1);
 
-    private static ((int, int, int, int) changes, int price)[] Windows((int price, int change)[] seq) {
-        var r = new ((int, int, int, int) changes, int price)[seq.Length - 3];
-        
-        for (int i = 3, c = seq.Length; i < c; ++i)
-            r[i - 3] = ((seq[i - 3].change, seq[i - 2].change, seq[i - 1].change, seq[i].change), seq[i].price);
-        
+    private static (int changeKey, int price)[] Windows((int price, int change)[] seq) {
+        var r = new (int, int)[seq.Length - 3];
+
+        for (int i = 3, c = seq.Length; i < c; ++i) {
+            var changeKey1 = 10 + seq[i - 3].change;
+            var changeKey2 = 10 + seq[i - 2].change;
+            var changeKey3 = 10 + seq[i - 1].change;
+            var changeKey4 = 10 + seq[i].change;
+            var changeKey = changeKey1 * 1000000 + changeKey2 * 10000 + changeKey3 * 100 + changeKey4;
+            r[i - 3] = (changeKey, seq[i].price);
+        }
+
         return r;
     }
 
@@ -58,8 +65,8 @@ public class Day22(string? input = null, ITestOutputHelper? outputHelper = null)
         var sellingPrices = monkeys.Select(pairs =>
             Windows(pairs)
                 .Where(p => p.price > 0) // we only care if we can get a half-decent price
-                .GroupBy(p => p.changes)
-                .ToDictionary(p => p.Key, p => p.First().price)).ToArray();
+                .GroupBy(p => p.changeKey)
+                .ToFrozenDictionary(p => p.Key, p => p.First().price)).ToArray();
 
         var allSequences = sellingPrices
             .SelectMany(d => d.Keys)
