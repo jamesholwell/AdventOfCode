@@ -29,7 +29,7 @@ public class Day23(string? input = null, ITestOutputHelper? outputHelper = null)
         }
 
         return connections
-            .ToDictionary(p => p.Key, p => p.Value.ToFrozenSet())
+            .ToDictionary(p => p.Key, p => p.Value.OrderBy(v => v).ToFrozenSet())
             .ToFrozenDictionary();
     }
 
@@ -51,7 +51,45 @@ public class Day23(string? input = null, ITestOutputHelper? outputHelper = null)
         return triplets.Count.ToString();
     }
 
-    protected override string SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
+    protected override string SolvePartTwo() {
+        var connections = GetConnections();
+        var i = 0;
+        var longestSet = string.Empty;
+
+        var seen = new HashSet<string>();
+        var queue = new Queue<string[]>(Shared.Split(Input).Select(s => s.Split('-')));
+
+        while (queue.TryDequeue(out var workingSet)) {
+            // calculate the set key
+            Array.Sort(workingSet);
+            var key = string.Join(',', workingSet);
+            
+            // ensure we are novel
+            if (!seen.Add(key))
+                continue;
+            
+            // little progress report
+            if (++i % 10000 == 0)
+                Output.WriteLine($"i = {i}, queue = {queue.Count}, current = {key}");
+
+            // calculate the options for the next step
+            var remainingConnections = connections[workingSet[0]].Except(workingSet);
+            var didQueue = false;
+
+            foreach (var nextNode in remainingConnections) {
+                if (connections[nextNode].IsSupersetOf(workingSet)) {
+                    queue.Enqueue(workingSet.Concat([nextNode]).ToArray());
+                    didQueue = true;
+                }
+            }
+
+            // if we couldn't get any bigger, see if we were the biggest so far
+            if (!didQueue && key.Length > longestSet.Length) 
+                longestSet = key;
+        }
+
+        return longestSet;
+    }
 
     private const string? ExampleInput = 
         """
@@ -93,5 +131,11 @@ public class Day23(string? input = null, ITestOutputHelper? outputHelper = null)
     public void SolvesPartOneExample() {
         var actual = new Day23(ExampleInput, Output).SolvePartOne();
         Assert.Equal("7", actual);
+    }
+    
+    [Fact]
+    public void SolvesPartTwoExample() {
+        var actual = new Day23(ExampleInput, Output).SolvePartTwo();
+        Assert.Equal("co,de,ka,ta", actual);
     }
 }
