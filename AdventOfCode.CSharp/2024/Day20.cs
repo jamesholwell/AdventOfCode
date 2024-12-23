@@ -10,7 +10,8 @@ namespace AdventOfCode.CSharp._2024;
 public class Day20 : Solver {
     private readonly HashSet<(int x, int y)> spaces;
 
-    private readonly Dictionary<(int x, int y), int> dijkstra;
+    private readonly Dictionary<(int x, int y), int> forward;
+    private readonly Dictionary<(int x, int y), int> backward;
     
     private int minimumCheatSavingsForResult = 100;
     
@@ -19,7 +20,8 @@ public class Day20 : Solver {
     public Day20(string? input = null, ITestOutputHelper? outputHelper = null) : base(input, outputHelper) {
         if (input == null) {
             spaces = new HashSet<(int, int)>();
-            dijkstra = new Dictionary<(int, int), int>();
+            forward = new Dictionary<(int, int), int>();
+            backward = new Dictionary<(int, int), int>();
             return;
         }
         
@@ -29,8 +31,9 @@ public class Day20 : Solver {
         var coordinates = grid.Where(c => c == '.').Union([start, end]).ToArray();
         
         spaces = [..coordinates];
-        dijkstra = Algorithm.Dijkstra(start, coordinates, p => p, ConnectionFunc);
-        fastestTime = dijkstra[end];
+        forward = Algorithm.Dijkstra(start, coordinates, p => p, ConnectionFunc);
+        backward = Algorithm.Dijkstra(end, coordinates, p => p, ConnectionFunc);
+        fastestTime = forward[end];
         
         return;
 
@@ -49,12 +52,14 @@ public class Day20 : Solver {
         Trace.WriteLine($"Discovered {possibleCheats.Length} possible cheats");
 
         var cheatSavings = possibleCheats
-            .Select(pc => (cheat: pc, savings: dijkstra[pc.end] - dijkstra[pc.start] - 2))
+            .Select(pc => (cheat: pc, savings: fastestTime - forward[pc.start] - 2 - backward[pc.end]))
             .Where(cs => cs.savings > 0)
             .ToArray();
         
         foreach (var group in cheatSavings.GroupBy(ch => ch.savings).OrderBy(g => g.Key))
-            Trace.WriteLine($" - There are {group.Count()} cheats that save {group.Key} picoseconds.");
+            Trace.WriteLine(group.Count() == 1 
+                ? $" - There is one cheat that saves {group.Key} picoseconds." 
+                : $" - There are {group.Count()} cheats that save {group.Key} picoseconds.");
 
         return cheatSavings.Count(cs => cs.savings >= minimumCheatSavingsForResult);
         
@@ -95,12 +100,14 @@ public class Day20 : Solver {
         Trace.WriteLine($"Discovered {possibleCheats.Length} possible cheats");
 
         var cheatSavings = possibleCheats
-            .Select(pc => (cheat: pc, savings: dijkstra[pc.end] - dijkstra[pc.start] - pc.distance))
+            .Select(pc => (cheat: pc, savings: fastestTime - backward[pc.end] - forward[pc.start] - pc.distance))
             .Where(cs => cs.savings > 0)
             .ToArray();
         
-        foreach (var group in cheatSavings.GroupBy(ch => ch.savings).OrderBy(g => g.Key))
-            Trace.WriteLine($" - There are {group.Count()} cheats that save {group.Key} picoseconds.");
+        foreach (var group in cheatSavings.Where(cs => cs.savings >= minimumCheatSavingsForResult).GroupBy(ch => ch.savings).OrderBy(g => g.Key))
+            Trace.WriteLine(group.Count() == 1 
+                ? $" - There is one cheat that saves {group.Key} picoseconds." 
+                : $" - There are {group.Count()} cheats that save {group.Key} picoseconds.");
 
         return cheatSavings.Count(cs => cs.savings >= minimumCheatSavingsForResult);
         
