@@ -1,3 +1,4 @@
+using System.Text;
 using AdventOfCode.Core;
 using AdventOfCode.Core.Points;
 using Xunit;
@@ -10,6 +11,8 @@ public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
     private readonly ILookup<(char from, char to),string> numericPaths = CreateAllNumericPaths();
     
     private readonly Dictionary<(char, char, int), long> minimumLengthCache = [];
+    
+    private readonly Dictionary<(char, char, int), long> fastCache = [];
 
     /// <summary>
     ///     Gets the coordinate of the door button
@@ -124,48 +127,62 @@ public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
             default: throw new InvalidOperationException();
         }
     }
-    
-    private static string[] PressesForPresses(string required) {
-        return new[] { 'A' }.Concat(required).Pairwise()
-            .Aggregate(new[] { string.Empty }, (acc, pair) => 
-                acc.SelectMany(o => DirectionalPresses(pair.Item1, pair.Item2).Select(p => o + p + "A")).ToArray());
+
+    private static string OptimisedDirectionalPresses(char curr, char next) {
+        return (curr) switch {
+            'A' when next == '^' => "A<A",
+            'A' when next == '<' => "Av<<A",
+            'A' when next == 'v' => "A<vA",
+            'A' when next == '>' => "AvA",
+
+            '^' when next == 'A' => "A>A",
+            '^' when next == '<' => "Av<A",
+            '^' when next == 'v' => "AvA",
+            '^' when next == '>' => "Av>A",
+
+            '<' when next == 'A' => "A>>^A",
+            '<' when next == '^' => "A>^A",
+            '<' when next == 'v' => "A>A",
+            '<' when next == '>' => "A>>A",
+
+            'v' when next == 'A' => "A^>A",
+            'v' when next == '^' => "A^A",
+            'v' when next == '<' => "A<A",
+            'v' when next == '>' => "A>A",
+
+            '>' when next == 'A' => "A^A",
+            '>' when next == '^' => "A<^A",
+            '>' when next == '<' => "A<<A",
+            '>' when next == 'v' => "A<A",
+
+            _ => "AA"
+        };
     }
-    
-    private static string YourPressesForPresses(string required) {
-        return new[] { 'A' }.Concat(required).Pairwise()
-            .Aggregate(string.Empty, (acc, pair) => 
-                acc + DirectionalPresses(pair.Item1, pair.Item2).Last() + "A");
-    }
-    
-    private string Solve(string code) {
-        var shortest = int.MaxValue;
-        var candidate = string.Empty;
-        
-        Trace.WriteLine($"Code: {code}");
-        var pressesForCode = PressesForCode(code);
 
-        foreach (var pressesForCodeOption in pressesForCode) {
-            Trace.WriteLine($"1st Keypad: {pressesForCodeOption}");
-            var pressesForPresses = PressesForPresses(pressesForCodeOption);
+    private static string PressesForPresses(string required) {
+        var transitions = new[] { 'A' }.Concat(required).Pairwise();
+            
+        var sb = new StringBuilder(required.Length * 4);
 
-            foreach (var pressesForPressesOption in pressesForPresses) {
-                Trace.WriteLine($"2nd Keypad: {pressesForPressesOption}");
-                var yourPressesForPresses = YourPressesForPresses(pressesForPressesOption);
-
-                if (yourPressesForPresses.Length < shortest) {
-                    shortest = yourPressesForPresses.Length;
-                    candidate = yourPressesForPresses;
-                }
-            }
+        foreach (var transition in transitions) {
+            sb.Append(OptimisedDirectionalPresses(transition.Item1, transition.Item2)[1..^1]);
+            sb.Append('A');
         }
 
-        return candidate;
+        return sb.ToString();
     }
 
-    private long SolvePartTwo(string code) => 
-        PressesForCode(code)
-            .Min(p => new[] { 'A' }.Concat(p).Pairwise()
-                .Sum(pair => MinimumLength(pair.Item1, pair.Item2, 25)));
+    private long FastMinimumLength(char curr, char next, int remainingEncodings) {
+        if (remainingEncodings == 0 || curr == next)
+            return 1;
+
+        if (fastCache.TryGetValue((curr, next, remainingEncodings), out long result))
+            return result;
+            
+        var presses = OptimisedDirectionalPresses(curr, next);
+        
+        return fastCache[(curr, next, remainingEncodings)] = presses.Pairwise().Sum(pair => FastMinimumLength(pair.Item1, pair.Item2, remainingEncodings - 1));
+    }
 
     private long MinimumLength(char curr, char next, int remainingEncodings) {
         if (minimumLengthCache.TryGetValue((curr, next, remainingEncodings), out var value))
@@ -174,35 +191,49 @@ public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
         return minimumLengthCache[(curr, next, remainingEncodings)] = MinimumLengthInner(curr, next, remainingEncodings);
     }
 
+    /// <summary>
+    ///     Brute-force calculate the minimum length for an encoding
+    /// </summary>
+    /// <param name="curr"></param>
+    /// <param name="next"></param>
+    /// <param name="remainingEncodings"></param>
+    /// <remarks>
+    ///     Equivalent to the following:
+    ///     <![CDATA[
+    ///     private long DebuggableMinimumLengthInner(char curr, char next, int remainingEncodings) {
+    ///         if (remainingEncodings == 0)
+    ///             return 1;
+    ///     
+    ///         var directionalPresses = DirectionalPresses(curr, next);
+    ///         var min = long.MaxValue;
+    ///         foreach (var d in directionalPresses) {
+    ///             var length = 0L;
+    ///             var steps = new[] { 'A' }.Concat(d).Concat(new[] { 'A' }).Pairwise();
+    ///             
+    ///             foreach (var p in steps)
+    ///                 length += MinimumLength(p.Item1, p.Item2, remainingEncodings - 1);
+    ///     
+    ///             if (length < min)
+    ///                 min = length;
+    ///         }
+    ///     
+    ///         return min;
+    ///     }
+    ///     ]]>
+    /// </remarks>
+    /// <returns></returns>
     private long MinimumLengthInner(char curr, char next, int remainingEncodings) => 
         remainingEncodings == 0 ? 1 : 
             DirectionalPresses(curr, next).Select(d => new[] { 'A' }.Concat(d).Concat(['A']).Pairwise()).Select(steps => steps.Sum(p => MinimumLength(p.Item1, p.Item2, remainingEncodings - 1))).Min();
 
-    /*
-    private long DebuggableMinimumLengthInner(char curr, char next, int remainingEncodings) {
-        if (remainingEncodings == 0)
-            return 1;
+    private long Solve(string code, int remainingEncodings) => 
+        PressesForCode(code)
+            .Min(p => new[] { 'A' }.Concat(p).Pairwise()
+                .Sum(pair => FastMinimumLength(pair.Item1, pair.Item2, remainingEncodings)));
 
-        var directionalPresses = DirectionalPresses(curr, next);
-        var min = long.MaxValue;
-        foreach (var d in directionalPresses) {
-            var length = 0L;
-            var steps = new[] { 'A' }.Concat(d).Concat(new[] { 'A' }).Pairwise();
-            
-            foreach (var p in steps)
-                length += MinimumLength(p.Item1, p.Item2, remainingEncodings - 1);
+    protected override long SolvePartOne() => Shared.Split(Input).Sum(code => int.Parse(code[..^1]) * Solve(code, 2));
 
-            if (length < min)
-                min = length;
-        }
-
-        return min;
-    }
-    */
-
-    protected override long SolvePartOne() => Shared.Split(Input).Sum(code => int.Parse(code[..^1]) * Solve(code).Length);
-
-    protected override long SolvePartTwo() => Shared.Split(Input).Sum(code => int.Parse(code[..^1]) * SolvePartTwo(code));
+    protected override long SolvePartTwo() => Shared.Split(Input).Sum(code => int.Parse(code[..^1]) * Solve(code, 25));
 
     private const string? ExampleInput = 
         """
@@ -236,15 +267,15 @@ public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
 
     [Theory]
     // ReSharper disable StringLiteralTypo
-    [InlineData("<A^A>^^AvvvA", "v<<A>>^A<A>AvA<^AA>A<vAAA>^A")]
-    [InlineData("v<<A>>^A<A>AvA<^AA>A<vAAA>^A", "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A")]
+    [InlineData("<A^A>^^AvvvA", "v<<A>>^A<A>AvA<^AA>A<vAAA^>A")]
+    [InlineData("v<<A>>^A<A>AvA<^AA>A<vAAA>^A", "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA^>A<v<A>^A>AAvA^A<v<A>A^>AAAvA<^A>A")]
     // ReSharper restore StringLiteralTypo
     public void CalculatePressesForDirectionalKeypadCorrectly(string input, string expected) {
+        // cheeky scamp, examples aren't optimal for higher number of keypads
+        expected = expected.Replace("<v<", "v<<").Replace(">^>", ">>^");
+            
         var actual = PressesForPresses(input);
-        foreach (var option in actual)
-            Trace.WriteLine(option);
-        
-        Assert.Contains(expected, actual);
+        Assert.Equal(expected, actual);
     }
 
     [Theory]
@@ -254,12 +285,39 @@ public class Day21(string? input = null, ITestOutputHelper? outputHelper = null)
     [InlineData("456A", "<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A")]
     [InlineData("379A", "<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A")]
     public void SolvesEachLengthOfPartOne(string input, string expected) {
-        var actual = new string(Solve(input));
-        Trace.WriteLine(expected);
-        Trace.WriteLine(actual);
-        Assert.Equal(expected.Length, actual.Length);    
+        var actual = Solve(input, 2);
+        Assert.Equal(expected.Length, actual);    
     }
 
+    [Theory]
+    [InlineData('A', '<')]
+    [InlineData('A', 'v')]
+    [InlineData('^', '>')]
+    [InlineData('<', 'A')]
+    [InlineData('v', 'A')]
+    [InlineData('>', '^')]
+    public void TestIfBestCandidatesChange(char curr, char next) {
+        var options = DirectionalPresses(curr, next);
+
+        for (var i = 0; i < 10; ++i) {
+            var remainingEncodings = i;
+            var answers = options.Select(option => (
+                    option, 
+                    length: new[] { 'A' }.Concat(option).Concat(['A']).Pairwise().Sum(p => MinimumLength(p.Item1, p.Item2, remainingEncodings))))
+                .ToArray();
+
+            var trace = answers.Select(a => $"{a.option}={a.length}").Aggregate((a, b) => $"{a}, {b}");
+            
+            if (answers.GroupBy(p => p.length).Count() == 1) {
+                Trace.WriteLine($"For {i} downstream keypads, it's a tie ({trace})");
+                continue;
+            }
+            
+            var best = answers.OrderBy(p => p.length).First();
+            Trace.WriteLine($"For {i} keypads, {best.option} is best ({trace})");
+        }
+    }
+    
     [Fact]
     public void SolvesPartOneExample() {
         var actual = new Day21(ExampleInput, Output).SolvePartOne();
