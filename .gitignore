@@ -34,3 +34,4 @@ _TeamCity*
 # Inputs
 inputs
 !inputs/day0.txt
+.DS_Store
