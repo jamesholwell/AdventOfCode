@@ -1,120 +1,137 @@
 ﻿using System.CommandLine;
-using AdventOfCode;
+using System.CommandLine.Parsing;
 using AdventOfCode.Functions;
 using AdventOfCode.Infrastructure;
 
-var factory =
-    new SolverFactory()
-        .AddAssembly<AdventOfCode.CSharp.TemplateSolver>(string.Empty)
-        .AddAssembly<AdventOfCode.FSharp.TemplateSolver>("fsharp");
-
 var puzzleArgument =
-    new Argument<PuzzleSpecification>(
-        "puzzle",
-        description: "Puzzle to solve e.g. 'day1' or '2015 day1' or 'day3 part2'",
-        parse: result => {
-            var spec = new PuzzleSpecification();
-            var taken = 0;
+    new Argument<PuzzleArguments>("puzzle") {
+        Description = "Puzzle to solve e.g. 'day1' or '2015 day1' or 'day3 part2'",
+        Arity = ArgumentArity.ZeroOrMore,
+        CustomParser = PuzzleArguments.Parse
+    };
 
-            foreach (var token in result.Tokens) {
-                var value = token.Value;
-                ++taken;
+var forceOption = new Option<bool>("--force") { Description = "Continue despite errors (e.g. overwrite an existing file)" };
 
-                if (value.StartsWith("-")) break;
+// basic usage
+var traceOption = new Option<bool>("--trace") { Description = "Output trace information" };
+var benchmarkOption = new Option<bool>("--bench") { Description = "Benchmark solver performance" };
+var run = new Command("run", "Solve a puzzle (default)") {
+    Arguments = { puzzleArgument },
+    Options = { traceOption, benchmarkOption },
+};
+Action<ParseResult> runAction = parse => {
+    var puzzle = parse.GetValue(puzzleArgument);
+    var factory = CreateSolverFactory();
 
-                if (value.StartsWith("day"))
-                    spec.Day = value;
-
-                else if (value.StartsWith("pt"))
-                    spec.IsPartTwo = "pt2".Equals(value, StringComparison.OrdinalIgnoreCase);
-
-                else if (value.StartsWith("part"))
-                    spec.IsPartTwo = "part2".Equals(value, StringComparison.OrdinalIgnoreCase);
-
-                else if (value.StartsWith("20"))
-                    spec.Event = value;
-
-                else
-                    spec.SolverHint = value;
-            }
-
-            result.OnlyTake(taken);
-
-            return spec;
-        }) { Arity = ArgumentArity.ZeroOrMore };
-
-var startArgument = new Option<bool>(
-    "--start",
-    "Initialize a new empty solver in the today project");
-
-var stageArgument = new Option<bool>(
-    "--stage",
-    "Stage a 'today' solver into the main project");
-
-var finishArgument = new Option<bool>(
-    "--finish",
-    "Finish work on a 'today' solver and move to the main project");
-
-var traceArgument = new Option<bool>(
-    "--trace",
-    "Output trace information");
-
-var listArgument = new Option<bool>(
-    "--list",
-    "Show all available solvers");
-
-var benchmarkArgument = new Option<bool>(
-    "--bench",
-    "Benchmark solver performance");
-
-var forceArgument = new Option<bool>(
-    "--force",
-    "Force an operation to continue despite errors (e.g. to overwrite an existing file)");
-
-var root = new RootCommand { puzzleArgument, startArgument, stageArgument, finishArgument, traceArgument, listArgument, benchmarkArgument, forceArgument };
-
-root.SetHandler(context => {
-    var puzzle = context.ParseResult.GetValueForArgument(puzzleArgument);
-
-    if (string.IsNullOrWhiteSpace(puzzle.Day) && DateTime.UtcNow.Month == 12)
-        puzzle.Day = $"day{DateTime.UtcNow.AddHours(-5).Day}";
-
-    if (string.IsNullOrWhiteSpace(puzzle.Event))
-        puzzle.Event = DateTime.UtcNow.AddYears(DateTime.UtcNow.Month < 12 ? -1 : 0).Year.ToString();
-
-    var isStarting = context.ParseResult.GetValueForOption(startArgument);
-    if (isStarting) {
-        new CreateSolver(context.Console).Execute(puzzle);
-        return;
-    }
-    
-    var isStaging = context.ParseResult.GetValueForOption(stageArgument);
-    if (isStaging) {
-        var isForcing = context.ParseResult.GetValueForOption(forceArgument);
-        new StageSolver(context.Console).Execute(puzzle, isForcing);
-        return;
-    }
-    
-    var isFinishing = context.ParseResult.GetValueForOption(finishArgument);
-    if (isFinishing) {
-        new FinishSolver(context.Console).Execute(puzzle);
-        return;
-    }
-    
-    var isListing = context.ParseResult.GetValueForOption(listArgument);
-    if (isListing ||
-        string.IsNullOrWhiteSpace(puzzle.Event) ||
-        string.IsNullOrWhiteSpace(puzzle.Day)) {
-        new ListSolvers(context.Console, factory).Execute();
-        return;
-    }
-    
-    var isTracing = context.ParseResult.GetValueForOption(traceArgument);
-    var isBenchmarking = context.ParseResult.GetValueForOption(benchmarkArgument);
-    if (isBenchmarking)
-        new BenchmarkSolvers(context.Console, factory).Execute(puzzle);
+    if (!puzzle.IsValid) 
+        new ListSolvers(factory).Execute();
+    else if (parse.GetValue(benchmarkOption))
+        new BenchmarkSolvers(factory).Execute(puzzle);
     else
-        new RunSolver(context.Console, factory, isTracing).Execute(puzzle);
+        new RunSolver(factory, parse.GetValue(traceOption)).Execute(puzzle);
+};
+run.SetAction(runAction);
+
+// workflow
+var start = new Command("start", "Initialize a new solver.") {
+    Arguments = { puzzleArgument },
+    Options = { forceOption }
+};
+start.SetAction(parse => new CreateSolver().Execute(parse.GetValue(puzzleArgument)!, parse.GetValue(forceOption)));
+
+var stage = new Command("stage", "Copies the current solver to the library.") {
+    Options = { forceOption }
+};
+stage.SetAction(parse => new StageSolver().Execute(parse.GetValue(forceOption)));
+
+var finish = new Command("finish", "Moves the current solver to the library and deletes the original.");
+finish.SetAction(_ => new FinishSolver().Execute());
+
+var next = new Command("next", "Finishes the current puzzle and starts the next day.");
+next.SetAction(_ => new NextSolver().Execute());
+
+var list = new Command("list", "Show all available solvers");
+list.SetAction(_ => {
+    var factory = CreateSolverFactory();
+    new ListSolvers(factory).Execute();
 });
 
-await root.InvokeAsync(args);
+// build the command tree
+var root = new RootCommand("Advent of Code runner") { puzzleArgument, traceOption, benchmarkOption };
+root.Subcommands.Add(run);
+root.Subcommands.Add(start);
+root.Subcommands.Add(stage);
+root.Subcommands.Add(finish);
+root.Subcommands.Add(next);
+root.Subcommands.Add(list);
+root.SetAction(runAction);
+
+return await root.Parse(args).InvokeAsync();
+
+SolverFactory CreateSolverFactory() {
+    var solverFactory =
+        new SolverFactory()
+            .AddAssembly<AdventOfCode.CSharp.TemplateSolver>(string.Empty)
+            .AddAssembly<AdventOfCode.FSharp.TemplateSolver>("fsharp");
+    return solverFactory;
+}
+
+public enum Parts {
+    Part1 = 1,
+    Part2 = 2
+}
+
+public readonly record struct PuzzleArguments {
+    public int Event { get; private init; }
+
+    public int Day { get; private init; }
+
+    public Parts Part { get; private init; }
+
+    public string Suffix { get; private init; }
+
+    public bool IsValid => Day is >= 1 and <= 25 && Event is >= 2015 and < 2099;
+
+    public static PuzzleArguments Parse(ArgumentResult result) {
+        var args = CreateDefault();
+
+        foreach (var token in result.Tokens) {
+            var value = token.Value;
+
+            // skip options
+            if (value.StartsWith('-') || value.StartsWith('/')) break;
+
+            // detect event
+            if (value.StartsWith("20") && value.Length == 4 && int.TryParse(value, out var @event))
+                args = args with { Event = @event };
+
+            // detect day
+            else if (value.StartsWith("day") && value.Length > 3 && int.TryParse(value[3..], out var day))
+                args = args with { Day = day };
+
+            // detect part (part 1 by default)
+            else if (value.Equals("pt2", StringComparison.OrdinalIgnoreCase)
+                     || value.Equals("part2", StringComparison.OrdinalIgnoreCase))
+                args = args with { Part = Parts.Part2 };
+
+            // anything else is pushed into the hint
+            else
+                args = args with { Suffix = $"{args.Suffix}{value}" };
+        }
+        
+        return args;
+    }
+
+    private static PuzzleArguments CreateDefault() {
+        var now = DateTime.UtcNow.AddHours(-5);
+
+        return new PuzzleArguments {
+            Event = now.Month == 12 ? now.Year : now.Year - 1,
+            Day = now.Month == 12 ? now.Day : 0,
+            Part = Parts.Part1,
+            Suffix = string.Empty
+        };
+    }
+
+    public override string ToString() => $"(Event = {Event}, Day = {Day}" + (Suffix == null ? string.Empty : $", Suffix = {Suffix}") + ")";
+}

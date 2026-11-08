@@ -6,13 +6,17 @@ namespace AdventOfCode.Infrastructure;
 public class SolverFactory {
     private readonly IDictionary<string, Type> solvers = new SortedDictionary<string, Type>(new SolverComparer());
 
-    public ISolver? Create(string day, string @event, string input, string? solver = null, ITestOutputHelper? output = null) {
-        var prefix = $"{@event.ToLowerInvariant()}-{day.ToLowerInvariant()}";
-        if (solver != null)
-            prefix += $"-{solver.ToLowerInvariant()}";
+    public ISolver? Create(int day, int @event, string input, string? hint = null, ITestOutputHelper? output = null) {
+        var prefix = $"{@event}-day{day}";
+        var key = string.IsNullOrWhiteSpace(hint) 
+            ? prefix : 
+            $"{prefix}-{hint.ToLowerInvariant()}";
         
-        var candidates = solvers.Keys.Where(k => k == prefix).ToArray();
+        var candidates = solvers.Keys.Where(k => k == key).ToArray();
         if (candidates.Length != 1)
+            candidates = solvers.Keys.Where(k => k.StartsWith(key)).ToArray();
+        
+        if (candidates.Length == 0)
             candidates = solvers.Keys.Where(k => k.StartsWith(prefix)).ToArray();
         
         return candidates.Length switch {
@@ -22,8 +26,8 @@ public class SolverFactory {
         };
     }
 
-    public IDictionary<string, ISolver> CreateAll(string day, string @event, string input, ITestOutputHelper? output = null) {
-        return solvers.Keys.Where(k => k.StartsWith($"{@event.ToLowerInvariant()}-{day.ToLowerInvariant()}"))
+    public IDictionary<string, ISolver> CreateAll(int day, int @event, string input, ITestOutputHelper? output = null) {
+        return solvers.Keys.Where(k => k.StartsWith($"{@event}-day{day}"))
             .ToDictionary(k => k, k => Instantiate(solvers[k], input, output));
     }
 
