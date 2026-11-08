@@ -21,8 +21,9 @@ if (solvers.Length != 1) {
 }
 
 var type = solvers[0];
-var constructor = type.GetConstructor(new[] { typeof(string), typeof(ITestOutputHelper) });
 
+// verify the constructor
+var constructor = type.GetConstructor([typeof(string), typeof(ITestOutputHelper)]);
 if (constructor is null) {
     Console.ForegroundColor = ConsoleColor.DarkRed;
     Console.WriteLine("Solver has incompatible constructor");
@@ -30,20 +31,34 @@ if (constructor is null) {
     return;
 }
 
-// determine the puzzle specification
-var @event = type.Namespace == null
-    ? string.Empty
-    : type.Namespace[(type.Namespace.LastIndexOf('.') + 1)..].TrimStart('_');
+// determine the puzzle event
+var namespaceMatch = Puzzle.EventPattern.Match(type.Namespace ?? string.Empty);
+if (!namespaceMatch.Success) {
+    Console.ForegroundColor = ConsoleColor.DarkRed;
+    Console.WriteLine($"Solver has missing or unexpected namespace (expected: AdventOfCode.Today._2015; found: {type.Namespace})");
+    Console.ResetColor();
+    return;
+}
 
-var day = type.Name;
+var @event = Puzzle.GetEvent(namespaceMatch);
+
+// determine the puzzle day
+var nameMatch = Puzzle.DayPattern.Match(type.Name);
+if (!nameMatch.Success) {
+    Console.ForegroundColor = ConsoleColor.DarkRed;
+    Console.WriteLine($"Solver has unexpected type name (expected: Day1; found: {type.Name})");
+    Console.ResetColor();
+    return;
+}
+
+var day = Puzzle.GetDay(nameMatch);
 
 // read the puzzle input
-var sanitize = new Regex("[^a-z0-9]", RegexOptions.IgnoreCase);
-var path = $"./inputs/{sanitize.Replace(@event, string.Empty)}/{sanitize.Replace(day, string.Empty)}.txt";
+var path = $"./inputs/{@event}/day{day}.txt";
 
 if (!File.Exists(path)) {
     Console.ForegroundColor = ConsoleColor.DarkRed;
-    Console.WriteLine("Input file does not exist");
+    Console.WriteLine($"Puzzle input is missing ({path})");
     Console.ResetColor();
     return;
 }
@@ -117,6 +132,26 @@ namespace AdventOfCode.Shared {
 
         public static void WriteLine(this ITestOutputHelper outputHelper, object? value) =>
             outputHelper.WriteLine(value?.ToString() ?? "<null string>");
+    }
+    
+    #endregion
+    
+    #region AdvendOfCode.Shared.Puzzle.cs
+    
+    public static partial class Puzzle {
+        public static readonly Regex EventPattern = EventRegex();
+
+        public static int GetEvent(Match eventMatch) => int.Parse(eventMatch.Groups[2].Value);
+    
+        public static readonly Regex DayPattern = DayRegex();
+
+        public static int GetDay(Match dayMatch) => int.Parse(dayMatch.Groups[1].Value);
+
+        [GeneratedRegex(@"^([a-z]+\.)+_?(20[0-9]{2})$", RegexOptions.IgnoreCase, "en-GB")]
+        private static partial Regex EventRegex();
+
+        [GeneratedRegex("^Day([1-9]|1[0-9]|2[0-5])([a-z]+)?$", RegexOptions.IgnoreCase, "en-GB")]
+        private static partial Regex DayRegex();
     }
     
     #endregion
