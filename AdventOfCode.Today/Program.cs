@@ -54,16 +54,12 @@ if (!nameMatch.Success) {
 var day = Puzzle.GetDay(nameMatch);
 
 // read the puzzle input
-var path = $"./inputs/{@event}/day{day}.txt";
-
-if (!File.Exists(path)) {
+if (!Input.TryRead(@event, day, out var input)) {
     Console.ForegroundColor = ConsoleColor.DarkRed;
-    Console.WriteLine($"Puzzle input is missing ({path})");
+    Console.WriteLine($"Puzzle input is missing ({Input.PathFor(@event, day)})");
     Console.ResetColor();
     return;
 }
-
-var input = File.ReadAllText(path);
 
 // instantiate the solver
 var isTracing = args.Any(a => string.Equals(a, "--trace", StringComparison.OrdinalIgnoreCase));
@@ -80,6 +76,20 @@ namespace AdventOfCode.Shared {
     #region AdventOfCode.Shared.Input.cs
     
     public static class Input {
+        public static string PathFor(int @event, int day) => $"./inputs/{@event}/day{day}.txt";
+
+        public static bool TryRead(int @event, int day, out string? contents) {
+            var path = PathFor(@event, day);
+            
+            if (!File.Exists(path)) {
+                contents = null;
+                return false;
+            }
+
+            contents = File.ReadAllText(path);
+            return true;
+        }
+
         public static string[] SplitBy(this string s, string b) =>
             s.Replace("\r\n", "\n").Trim('\n').Split(b);
 

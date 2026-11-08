@@ -3,6 +3,20 @@
 namespace AdventOfCode.Shared;
 
 public static class Input {
+    public static string PathFor(int @event, int day) => $"./inputs/{@event}/day{day}.txt";
+
+    public static bool TryRead(int @event, int day, out string? contents) {
+        var path = PathFor(@event, day);
+            
+        if (!File.Exists(path)) {
+            contents = null;
+            return false;
+        }
+
+        contents = File.ReadAllText(path);
+        return true;
+    }
+    
     public static string[] SplitBy(this string s, string b) =>
         s.Replace("\r\n", "\n").Trim('\n').Split(b);
 
