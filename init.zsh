@@ -9,7 +9,7 @@ buildaoc() {
 }
 
 runaoc() {
-  local tfm="net8.0"
+  local tfm="net10.0"
   dotnet "./AdventOfCode/bin/Release/$tfm/AdventOfCode.dll" "$@"
 }
 
