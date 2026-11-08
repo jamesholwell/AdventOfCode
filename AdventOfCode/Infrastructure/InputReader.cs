@@ -1,32 +1,26 @@
-using System.CommandLine;
-using System.Text.RegularExpressions;
+using AdventOfCode.Shared;
 
 namespace AdventOfCode.Infrastructure;
 
 internal static class InputReader {
-    internal static readonly Regex FilenameSanitizer = new("[^a-z0-9]", RegexOptions.IgnoreCase);
-
-    public static bool TryReadInput(PuzzleSpecification puzzle, out string input, IConsole console) {
-        if (string.IsNullOrWhiteSpace(puzzle.Event) || string.IsNullOrWhiteSpace(puzzle.Day)) {
+    public static bool TryReadInput(PuzzleArguments puzzle, out string? input) {
+        if (!puzzle.IsValid) {
             input = string.Empty;
             return false;
         }
 
-        var path =
-            $"./inputs/{FilenameSanitizer.Replace(puzzle.Event, string.Empty)}/{FilenameSanitizer.Replace(puzzle.Day, string.Empty)}.txt";
+        var path = Path.GetFullPath(Input.PathFor(puzzle.Event, puzzle.Day));
 
-        if (!File.Exists(path)) {
+        if (!Input.TryRead(puzzle.Event, puzzle.Day, out input)) {
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            console.WriteLine($"# Trying input {Path.GetFullPath(path)}");
+            Console.WriteLine($"# Trying input {path}");
             Console.ResetColor();
             input = string.Empty;
             return false;
         }
 
-        input = File.ReadAllText(path);
-
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        console.WriteLine($"# Using input {Path.GetFileName(path)} ({input.Length} characters)");
+        Console.WriteLine($"# Using input {Path.GetFileName(path)} ({input!.Length} characters)");
         Console.ResetColor();
 
         return true;
