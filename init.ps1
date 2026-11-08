@@ -9,7 +9,7 @@ function global:build-aoc {
 
 function global:run-aoc {
     Param([string[]]$arguments)
-    $tfm = "net8.0"
+    $tfm = "net10.0"
     dotnet ./AdventOfCode/bin/Release/$tfm/AdventOfCode.dll @arguments
 }
 
