@@ -1,4 +1,4 @@
-﻿using AdventOfCode.Core;
+﻿using AdventOfCode.Shared;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,11 +10,11 @@ public class TemplateSolver(string? input = null, ITestOutputHelper? outputHelpe
 
     protected override long SolvePartTwo() => throw new NotImplementedException("Solve part 1 first");
 
-    private const string? ExampleInput = 
+    private const string? ExampleInput =
         """
-        
+
         <snip>
-        
+
         """;
 
     [Fact]

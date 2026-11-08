@@ -1,14 +1,22 @@
-using AdventOfCode.Core.Output;
 using Xunit.Abstractions;
 
-namespace AdventOfCode.Core;
+namespace AdventOfCode.Shared;
 
 public interface ISolver {
     string SolvePartOne();
     string SolvePartTwo();
 }
 
+/// <summary>
+///     Strongly typed base class for solvers returning solutions of type T
+/// </summary>
+/// <typeparam name="T">solution type, often long or string</typeparam>
 public abstract class Solver<T> : ISolver {
+    /// <summary>
+    ///     Construct the base for puzzle solvers
+    /// </summary>
+    /// <param name="input">unprocessed contents of the input file</param>
+    /// <param name="outputHelper">console-like interface supplied by Xunit / the runner</param>
     protected Solver(string? input = null, ITestOutputHelper? outputHelper = null) {
         Input = input ?? string.Empty;
         Output = outputHelper ?? new NullOutputHelper();
@@ -34,5 +42,10 @@ public abstract class Solver<T> : ISolver {
     protected abstract T SolvePartTwo();
 }
 
+/// <summary>
+///     Strongly typed base class for solvers returning integer numbers
+/// </summary>
+/// <param name="input">unprocessed contents of the input file</param>
+/// <param name="outputHelper">console-like interface supplied by Xunit / the runner</param>
 public abstract class Solver(string? input, ITestOutputHelper? outputHelper = null)
     : Solver<long>(input, outputHelper);

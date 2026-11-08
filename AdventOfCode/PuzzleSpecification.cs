@@ -1,4 +1,4 @@
-﻿namespace AdventOfCode.Core;
+﻿namespace AdventOfCode;
 
 public struct PuzzleSpecification {
     public string Event { get; set; }

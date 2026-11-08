@@ -1,5 +1,5 @@
 ﻿using System.CommandLine;
-using AdventOfCode.Core;
+using AdventOfCode;
 using AdventOfCode.Functions;
 using AdventOfCode.Infrastructure;
 
