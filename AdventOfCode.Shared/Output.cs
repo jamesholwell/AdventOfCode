@@ -1,7 +1,7 @@
 using System.Text;
 using Xunit.Abstractions;
 
-namespace AdventOfCode.Core.Output;
+namespace AdventOfCode.Shared;
 
 public class NullOutputHelper : ITestOutputHelper {
     public void WriteLine(string value) { }

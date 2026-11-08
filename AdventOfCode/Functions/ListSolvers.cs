@@ -1,4 +1,3 @@
-using AdventOfCode.Core;
 using System.CommandLine;
 using AdventOfCode.Infrastructure;
 

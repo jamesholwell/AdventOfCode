@@ -1,8 +1,7 @@
 using System.CommandLine;
 using System.Diagnostics;
-using AdventOfCode.Core;
-using AdventOfCode.Core.Output;
 using AdventOfCode.Infrastructure;
+using AdventOfCode.Shared;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.Functions;

@@ -1,6 +1,5 @@
 using System.CommandLine;
 using System.Text.RegularExpressions;
-using AdventOfCode.Core;
 
 namespace AdventOfCode.Infrastructure;
 

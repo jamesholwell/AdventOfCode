@@ -1,7 +1,6 @@
 using System.CommandLine;
 using System.Diagnostics;
 using System.Reflection;
-using AdventOfCode.Core;
 using AdventOfCode.Infrastructure;
 
 namespace AdventOfCode.Functions;
