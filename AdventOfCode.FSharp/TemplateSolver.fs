@@ -1,6 +1,6 @@
 ﻿namespace AdventOfCode.FSharp
 
-open AdventOfCode.Core
+open AdventOfCode.Shared
 open AdventOfCode.FSharp
 open Xunit
 

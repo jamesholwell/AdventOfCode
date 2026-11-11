@@ -1,34 +1,32 @@
-using AdventOfCode.Core;
-using System.CommandLine;
 using System.Diagnostics;
 using AdventOfCode.Infrastructure;
 
 namespace AdventOfCode.Functions;
 
-internal class BenchmarkSolvers(IConsole console, SolverFactory factory) {
-    public void Execute(PuzzleSpecification puzzle) {
-        if (!InputReader.TryReadInput(puzzle, out var input, console))
+internal class BenchmarkSolvers(SolverFactory factory) {
+    public void Execute(PuzzleArguments puzzle) {
+        if (!InputReader.TryReadInput(puzzle, out var input))
             return;
 
-        var solvers = factory.CreateAll(puzzle.Day, puzzle.Event, input);
+        var solvers = factory.CreateAll(puzzle.Day, puzzle.Event, input!);
 
         if (!solvers.Any()) {
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            console.WriteLine("No solvers found");
+            Console.WriteLine("No solvers found");
             Console.ResetColor();
 
-            console.WriteLine(string.Empty);
+            Console.WriteLine(string.Empty);
 
             return;
         }
 
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        console.WriteLine($"# Found {solvers.Count} solvers");
+        Console.WriteLine($"# Found {solvers.Count} solvers");
         Console.ResetColor();
-        console.WriteLine(string.Empty);
-        console.WriteLine("|--------------------------------|---------------------------|----------------------|");
-        console.WriteLine($"| {"Solver",-30} | {"Solution",-25} | {"Runtime",-20} |");
-        console.WriteLine("|--------------------------------|---------------------------|----------------------|");
+        Console.WriteLine(string.Empty);
+        Console.WriteLine("|--------------------------------|---------------------------|----------------------|");
+        Console.WriteLine($"| {"Solver",-30} | {"Solution",-25} | {"Runtime",-20} |");
+        Console.WriteLine("|--------------------------------|---------------------------|----------------------|");
 
         foreach (var pair in solvers) {
             var solverName = pair.Key;
@@ -39,27 +37,27 @@ internal class BenchmarkSolvers(IConsole console, SolverFactory factory) {
 
             sw.Start();
 
-            var solution = puzzle.IsPartTwo switch {
-                false => solver.SolvePartOne(),
-                true => solver.SolvePartTwo()
+            var solution = puzzle.Part switch {
+                Parts.Part2 => solver.SolvePartTwo(),
+                _ => solver.SolvePartOne(),
             };
             sw.Stop();
 
             if (sw.ElapsedMilliseconds < 1000) {
                 // do warmup for fast solvers
                 while (sw.Elapsed.Seconds < 5 && ++runs < 1000)
-                    solution = puzzle.IsPartTwo switch {
-                        false => solver.SolvePartOne(),
-                        true => solver.SolvePartTwo()
+                    solution = puzzle.Part switch {
+                        Parts.Part2 => solver.SolvePartTwo(),
+                        _ => solver.SolvePartOne(),
                     };
 
                 runs = 0;
                 sw.Restart();
 
                 while (sw.Elapsed.Seconds < 10 && ++runs < 10000)
-                    solution = puzzle.IsPartTwo switch {
-                        false => solver.SolvePartOne(),
-                        true => solver.SolvePartTwo()
+                    solution = puzzle.Part switch {
+                        Parts.Part2 => solver.SolvePartTwo(),
+                        _ => solver.SolvePartOne(),
                     };
 
                 sw.Stop();
@@ -74,10 +72,10 @@ internal class BenchmarkSolvers(IConsole console, SolverFactory factory) {
                 _ => $"{sw.ElapsedTicks / (double) runs} ticks"
             };
 
-            console.WriteLine($"| {solverName,-30} | {solution,-25} | {runtime,20} |");
+            Console.WriteLine($"| {solverName,-30} | {solution,-25} | {runtime,20} |");
         }
 
-        console.WriteLine("|--------------------------------|---------------------------|----------------------|");
-        console.WriteLine(string.Empty);
+        Console.WriteLine("|--------------------------------|---------------------------|----------------------|");
+        Console.WriteLine(string.Empty);
     }
 }
