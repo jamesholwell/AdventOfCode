@@ -66,7 +66,7 @@ var isTracing = args.Any(a => string.Equals(a, "--trace", StringComparison.Ordin
 var solver = (ISolver)constructor.Invoke([input, isTracing ? new TracingConsoleOutputHelper() : new ConsoleOutputHelper()]);
 
 var output =
-    args.Any(a => string.Equals(a, "pt2", StringComparison.OrdinalIgnoreCase))
+    args.Any(a => string.Equals(a, "part2", StringComparison.OrdinalIgnoreCase) || string.Equals(a, "pt2", StringComparison.OrdinalIgnoreCase))
         ? solver.SolvePartTwo()
         : solver.SolvePartOne();
 
