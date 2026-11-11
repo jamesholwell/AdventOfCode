@@ -9,9 +9,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventOfCode", "AdventOfCod
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventOfCode.CSharp", "AdventOfCode.CSharp\AdventOfCode.CSharp.csproj", "{5DBB2A4F-96F0-47F2-AFEB-6DA581227B8C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventOfCode.Core", "AdventOfCode.Core\AdventOfCode.Core.csproj", "{C0EF0D5F-E426-4E5A-B3E8-5533AEDC6365}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventOfCode.Shared", "AdventOfCode.Shared\AdventOfCode.Shared.csproj", "{C0EF0D5F-E426-4E5A-B3E8-5533AEDC6365}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventOfCode.Today", "AdventOfCode.Today\AdventOfCode.Today.csproj", "{DC3BDBE5-8E05-479C-8E46-B61A16D4D144}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Library", "Library", "{31E8D127-BFE8-43FC-9303-379F176A2221}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -42,5 +44,10 @@ Global
 		{DC3BDBE5-8E05-479C-8E46-B61A16D4D144}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DC3BDBE5-8E05-479C-8E46-B61A16D4D144}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DC3BDBE5-8E05-479C-8E46-B61A16D4D144}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5DBB2A4F-96F0-47F2-AFEB-6DA581227B8C} = {31E8D127-BFE8-43FC-9303-379F176A2221}
+		{58BBB4A1-1770-4C52-AA63-BB5C2363946A} = {31E8D127-BFE8-43FC-9303-379F176A2221}
+		{C0EF0D5F-E426-4E5A-B3E8-5533AEDC6365} = {31E8D127-BFE8-43FC-9303-379F176A2221}
 	EndGlobalSection
 EndGlobal
