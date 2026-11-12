@@ -24,6 +24,12 @@ aoc() {
     return
   fi
 
+  # now check for `aoc test` (handled by dotnet test)
+  if [[ ${#args[@]} -eq 1 && ${args[1]} == "test" ]]; then
+    dotnet test ./AdventOfCode.Today --nologo --logger "console;verbosity=normal" -- xUnit.ReporterSwitch=silent
+    return
+  fi
+
   # now check for `aoc build` (handled directly in zsh)
   if [[ ${#args[@]} -eq 1 && ${args[1]} == "build" ]]; then
     buildaoc

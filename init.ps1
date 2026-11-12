@@ -24,6 +24,12 @@ function global:aoc {
         return;
     }
 
+    # now check for `aoc test` (handled by dotnet test)
+    if ($arguments.Count -eq 1 -and $arguments[0] -eq "test") {
+        dotnet test ./AdventOfCode.Today --nologo --logger "console;verbosity=normal" -- xUnit.ReporterSwitch=silent
+        return;
+    }
+    
     # now check for `aoc build` (handled directly in powershell)
     if ($arguments.Count -eq 1 -and $arguments[0] -eq "build") {
         build-aoc
