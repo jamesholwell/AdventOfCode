@@ -6,7 +6,7 @@ namespace AdventOfCode.Functions;
 internal class NextSolver() {
     public void Execute() {
         if (!WorkflowHelper.TryLocateSolver(out var sourcePath)) {
-            WorkflowHelper.WriteError("No solver detected");
+            Console.WriteError("No solver detected");
             return;
         }
 
@@ -24,7 +24,7 @@ internal class NextSolver() {
             var suffix = Puzzle.GetSuffix(dayMatch);
             if (day < 25) {
                 if (WorkflowHelper.TryInitialiseSolver(@event, day + 1, suffix, false, out _)) {
-                    WorkflowHelper.WriteMessage($"Archived solver {sourcePath} and initialized Day {day + 1}");
+                    Console.WriteMessage($"Archived solver {sourcePath} and initialized Day {day + 1}");
                     return;
                 }
             }
@@ -35,6 +35,6 @@ internal class NextSolver() {
         if (Directory.GetFiles(sourceDirectory).Length == 0)
             Directory.Delete(sourceDirectory);
         
-        WorkflowHelper.WriteMessage($"Archived solver {sourcePath} to {targetPath}");
+        Console.WriteMessage($"Archived solver {sourcePath} to {targetPath}");
     }
 }

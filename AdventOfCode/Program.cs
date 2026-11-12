@@ -73,7 +73,7 @@ try {
     });
 }
 catch (AmbiguousSolverException e) {
-    WorkflowHelper.WriteError(e.Message);
+    Console.WriteError(e.Message);
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
     foreach (var candidate in e.Candidates)
@@ -85,7 +85,7 @@ catch (AmbiguousSolverException e) {
     return -1;
 }
 catch (Exception e) {
-    WorkflowHelper.WriteError(e.Message);
+    Console.WriteError(e.Message);
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
     Console.WriteLine(e.ToString());

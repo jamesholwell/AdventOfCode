@@ -122,18 +122,4 @@ internal static class WorkflowHelper {
 
         return basePath;
     }
-
-    internal static void WriteMessage(string message) {
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine(message);
-        Console.ResetColor();
-    }
-
-    internal static void WriteError(string errorMessage) {
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        Console.WriteLine(errorMessage);
-        Console.ResetColor();
-
-        Console.WriteLine(string.Empty);
-    }
 }

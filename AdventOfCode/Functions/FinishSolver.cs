@@ -5,7 +5,7 @@ namespace AdventOfCode.Functions;
 internal class FinishSolver() {
     public void Execute() {
         if (!WorkflowHelper.TryLocateSolver(out var sourcePath)) {
-            WorkflowHelper.WriteError("No solver detected");
+            Console.WriteError("No solver detected");
             return;
         }
 
@@ -20,6 +20,6 @@ internal class FinishSolver() {
         if (Directory.GetFiles(sourceDirectory).Length == 0)
             Directory.Delete(sourceDirectory);
         
-        WorkflowHelper.WriteMessage($"Archived solver {sourcePath} to {targetPath}");
+        Console.WriteMessage($"Archived solver {sourcePath} to {targetPath}");
     }
 }
