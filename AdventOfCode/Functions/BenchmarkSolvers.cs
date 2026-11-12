@@ -38,28 +38,18 @@ internal class BenchmarkSolvers(SolverFactory factory) {
 
             sw.Start();
 
-            var solution = puzzle.Part switch {
-                Parts.Part2 => solver.SolvePartTwo(),
-                _ => solver.SolvePartOne(),
-            };
-            sw.Stop();
-
+            var solution = solver.Solve(puzzle);
+            
             if (sw.ElapsedMilliseconds < 1000) {
                 // do warmup for fast solvers
                 while (sw.Elapsed.Seconds < 5 && ++runs < 1000)
-                    solution = puzzle.Part switch {
-                        Parts.Part2 => solver.SolvePartTwo(),
-                        _ => solver.SolvePartOne(),
-                    };
+                    solution = solver.Solve(puzzle);
 
                 runs = 0;
                 sw.Restart();
 
                 while (sw.Elapsed.Seconds < 10 && ++runs < 10000)
-                    solution = puzzle.Part switch {
-                        Parts.Part2 => solver.SolvePartTwo(),
-                        _ => solver.SolvePartOne(),
-                    };
+                    solution = solver.Solve(puzzle);
 
                 sw.Stop();
             }

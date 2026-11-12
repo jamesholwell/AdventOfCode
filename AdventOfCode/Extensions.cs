@@ -1,6 +1,8 @@
-namespace AdventOfCode.Infrastructure;
+using AdventOfCode.Shared;
 
-internal static class ConsoleExtensions {
+namespace AdventOfCode;
+
+internal static class Extensions {
     extension(Console) {
         internal static void WriteMessage(string message) {
             Console.ForegroundColor = ConsoleColor.DarkGray;
@@ -16,4 +18,11 @@ internal static class ConsoleExtensions {
             Console.WriteLine(string.Empty);
         }
     }
+
+    internal static string Solve(this ISolver solver, PuzzleArguments puzzle) =>
+        puzzle.Part switch {
+            PuzzleArguments.Parts.Part2 => solver.SolvePartTwo(),
+            PuzzleArguments.Parts.Part1 => solver.SolvePartOne(),
+            _ => throw new ArgumentOutOfRangeException(nameof(puzzle.Part))
+        };
 }

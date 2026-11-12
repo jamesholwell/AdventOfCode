@@ -54,10 +54,7 @@ internal class RunSolver(SolverFactory factory, bool isTracing = false) {
         var sw = new Stopwatch();
         sw.Start();
 
-        var solution = puzzle.Part switch {
-            Parts.Part2 => solver.SolvePartTwo(),
-            _ => solver.SolvePartOne(),
-        };
+        var solution = solver.Solve(puzzle);
 
         sw.Stop();
 
