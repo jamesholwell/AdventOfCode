@@ -1,9 +1,8 @@
-using AdventOfCode.Infrastructure;
 using AdventOfCode.Services;
 
 namespace AdventOfCode.Functions;
 
-internal class FinishSolver() {
+internal class FinishSolver {
     public void Execute() {
         if (!Workflow.TryLocateSolver(out var sourcePath)) {
             Console.WriteError("No solver detected");

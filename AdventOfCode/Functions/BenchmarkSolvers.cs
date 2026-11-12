@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using AdventOfCode.Infrastructure;
 using AdventOfCode.Services;
 
 namespace AdventOfCode.Functions;

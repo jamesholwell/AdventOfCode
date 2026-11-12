@@ -1,4 +1,3 @@
-using AdventOfCode.Infrastructure;
 using AdventOfCode.Shared;
 
 namespace AdventOfCode.Services;

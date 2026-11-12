@@ -1,9 +1,8 @@
-using AdventOfCode.Infrastructure;
 using AdventOfCode.Services;
 
 namespace AdventOfCode.Functions;
 
-internal class CreateSolver() {
+internal class CreateSolver {
     public void Execute(PuzzleArguments puzzle, bool isForced) {
         if (!puzzle.IsValid) {
             Console.WriteError($"Failed to parse complete puzzle arguments (found: {puzzle})");

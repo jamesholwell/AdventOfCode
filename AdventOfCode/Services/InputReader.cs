@@ -1,6 +1,6 @@
 using AdventOfCode.Shared;
 
-namespace AdventOfCode.Infrastructure;
+namespace AdventOfCode.Services;
 
 internal static class InputReader {
     public static bool TryReadInput(PuzzleArguments puzzle, out string? input) {

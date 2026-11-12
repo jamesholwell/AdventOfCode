@@ -1,9 +1,8 @@
-using AdventOfCode.Infrastructure;
 using AdventOfCode.Services;
 
 namespace AdventOfCode.Functions;
 
-internal class StageSolver() {
+internal class StageSolver {
     public void Execute(bool isForced) {
         if (!Workflow.TryLocateSolver(out var sourcePath)) {
             Console.WriteError("No solver detected");

@@ -1,4 +1,3 @@
-using AdventOfCode.Infrastructure;
 using AdventOfCode.Shared;
 using Xunit.Abstractions;
 
