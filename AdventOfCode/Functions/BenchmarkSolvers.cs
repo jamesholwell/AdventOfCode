@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AdventOfCode.Infrastructure;
+using AdventOfCode.Services;
 
 namespace AdventOfCode.Functions;
 
@@ -8,7 +9,7 @@ internal class BenchmarkSolvers(SolverFactory factory) {
         if (!InputReader.TryReadInput(puzzle, out var input))
             return;
 
-        var solvers = factory.CreateAll(puzzle.Day, puzzle.Event, input!);
+        var solvers = factory.CreateAll(puzzle.Event, puzzle.Day, input!);
 
         if (!solvers.Any()) {
             Console.ForegroundColor = ConsoleColor.DarkRed;
