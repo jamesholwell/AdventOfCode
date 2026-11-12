@@ -1,16 +1,17 @@
 using AdventOfCode.Infrastructure;
+using AdventOfCode.Services;
 using AdventOfCode.Shared;
 
 namespace AdventOfCode.Functions;
 
 internal class NextSolver() {
     public void Execute() {
-        if (!WorkflowHelper.TryLocateSolver(out var sourcePath)) {
+        if (!Workflow.TryLocateSolver(out var sourcePath)) {
             Console.WriteError("No solver detected");
             return;
         }
 
-        if (!WorkflowHelper.TryStageFile(sourcePath!, true, out var targetPath))
+        if (!Workflow.TryStageFile(sourcePath!, true, out var targetPath))
             throw new InvalidOperationException("Failed to stage file during finish");
 
         // delete the source
@@ -23,7 +24,7 @@ internal class NextSolver() {
             var day = Puzzle.GetDay(dayMatch);
             var suffix = Puzzle.GetSuffix(dayMatch);
             if (day < 25) {
-                if (WorkflowHelper.TryInitialiseSolver(@event, day + 1, suffix, false, out _)) {
+                if (Workflow.TryInitialiseSolver(@event, day + 1, suffix, false, out _)) {
                     Console.WriteMessage($"Archived solver {sourcePath} and initialized Day {day + 1}");
                     return;
                 }

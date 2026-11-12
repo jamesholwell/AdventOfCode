@@ -1,8 +1,9 @@
+using AdventOfCode.Infrastructure;
 using AdventOfCode.Shared;
 
-namespace AdventOfCode.Infrastructure;
+namespace AdventOfCode.Services;
 
-internal static class WorkflowHelper {
+internal static class Workflow {
     /// <summary>
     ///     Initialise a new solver in the today project
     /// </summary>

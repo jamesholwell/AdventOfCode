@@ -1,15 +1,16 @@
 using AdventOfCode.Infrastructure;
+using AdventOfCode.Services;
 
 namespace AdventOfCode.Functions;
 
 internal class FinishSolver() {
     public void Execute() {
-        if (!WorkflowHelper.TryLocateSolver(out var sourcePath)) {
+        if (!Workflow.TryLocateSolver(out var sourcePath)) {
             Console.WriteError("No solver detected");
             return;
         }
 
-        if (!WorkflowHelper.TryStageFile(sourcePath!, true, out var targetPath)) 
+        if (!Workflow.TryStageFile(sourcePath!, true, out var targetPath)) 
             throw new InvalidOperationException("Failed to stage file during finish");
         
         // delete the source

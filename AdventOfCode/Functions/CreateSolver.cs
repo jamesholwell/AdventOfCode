@@ -1,4 +1,5 @@
 using AdventOfCode.Infrastructure;
+using AdventOfCode.Services;
 
 namespace AdventOfCode.Functions;
 
@@ -9,7 +10,7 @@ internal class CreateSolver() {
             return;
         }
         
-        if (!WorkflowHelper.TryInitialiseSolver(puzzle.Event, puzzle.Day, puzzle.Suffix, isForced, out var path)) {
+        if (!Workflow.TryInitialiseSolver(puzzle.Event, puzzle.Day, puzzle.Suffix, isForced, out var path)) {
             Console.WriteError($"Failed to create solver at {path}: you made need to use the --force");
             return;
         }
