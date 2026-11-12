@@ -2,6 +2,7 @@
 using System.CommandLine.Parsing;
 using AdventOfCode.Functions;
 using AdventOfCode.Infrastructure;
+using AdventOfCode.Services;
 using AdventOfCode.Shared;
 
 var puzzleArgument =

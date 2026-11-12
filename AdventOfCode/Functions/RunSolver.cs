@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AdventOfCode.Infrastructure;
+using AdventOfCode.Services;
 using AdventOfCode.Shared;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ internal class RunSolver(SolverFactory factory, bool isTracing = false) {
 
         try {
             ITestOutputHelper output = isTracing ? new TracingConsoleOutputHelper() : new ConsoleOutputHelper();
-            solver = factory.Create(puzzle.Day, puzzle.Event, input!, puzzle.Suffix, output);
+            solver = factory.Create(puzzle.Event, puzzle.Day, puzzle.Suffix, input!, output);
         }
         catch (AmbiguousSolverException e) {
             Console.ForegroundColor = ConsoleColor.DarkRed;
