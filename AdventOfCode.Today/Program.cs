@@ -1,7 +1,7 @@
 ﻿using AdventOfCode.Shared;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Xunit.Abstractions;
+using Xunit;
 
 // locate the solver class
 var solvers =
@@ -106,42 +106,52 @@ namespace AdventOfCode.Shared {
     #region AdvendOfCode.Shared.Output.cs
     
     public class NullOutputHelper : ITestOutputHelper {
+        public void Write(string message) { }
+    
+        public void Write(string format, params object[] args) { }
+    
         public void WriteLine(string value) { }
 
         public void WriteLine(string format, params object[] args) { }
+    
+        public string Output => throw new NotImplementedException();
     }
 
     public class ConsoleOutputHelper : ITestOutputHelper {
+        public void Write(string message) => Console.Write(message);
+
+        public void Write(string format, params object[] args) => Console.Write(format, args);
+    
         public void WriteLine(string value) => Console.WriteLine(value);
 
         public void WriteLine(string format, params object[] args) => Console.WriteLine(format, args);
+    
+        public string Output => throw new NotImplementedException();
     }
 
-    public class TracingConsoleOutputHelper : ITestOutputHelper {
-        public void WriteLine(string value) => Console.WriteLine(value);
-
-        public void WriteLine(string format, params object[] args) => Console.WriteLine(format, args);
-    }
+    public class TracingConsoleOutputHelper : ConsoleOutputHelper { }
 
     public static class OutputHelperExtensions {
-        public static void WriteHeading(this ITestOutputHelper outputHelper, string heading) {
-            outputHelper.WriteLine(string.Empty);
-            outputHelper.WriteLine(heading);
+        extension(ITestOutputHelper outputHelper) {
+            public void WriteHeading(string heading) {
+                outputHelper.WriteLine(string.Empty);
+                outputHelper.WriteLine(heading);
+            }
+
+            public void WriteLine() => outputHelper.WriteLine(string.Empty);
+
+            public void WriteLine(int value) =>
+                outputHelper.WriteLine(value.ToString());
+
+            public void WriteLine(long value) =>
+                outputHelper.WriteLine(value.ToString());
+
+            public void WriteLine(char[] value) =>
+                outputHelper.WriteLine(new string(value));
+
+            public void WriteLine(object? value) =>
+                outputHelper.WriteLine(value?.ToString() ?? "<null string>");
         }
-
-        public static void WriteLine(this ITestOutputHelper outputHelper) => outputHelper.WriteLine(string.Empty);
-
-        public static void WriteLine(this ITestOutputHelper outputHelper, int value) =>
-            outputHelper.WriteLine(value.ToString());
-
-        public static void WriteLine(this ITestOutputHelper outputHelper, long value) =>
-            outputHelper.WriteLine(value.ToString());
-
-        public static void WriteLine(this ITestOutputHelper outputHelper, char[] value) =>
-            outputHelper.WriteLine(new string(value));
-
-        public static void WriteLine(this ITestOutputHelper outputHelper, object? value) =>
-            outputHelper.WriteLine(value?.ToString() ?? "<null string>");
     }
     
     #endregion
