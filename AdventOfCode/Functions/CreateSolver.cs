@@ -9,7 +9,7 @@ internal class CreateSolver {
             return;
         }
         
-        if (!Workflow.TryInitialiseSolver(puzzle.Event, puzzle.Day, puzzle.Suffix, isForced, out var path)) {
+        if (!Workflow.TryInitialiseSolver(puzzle, isForced, out var path)) {
             Console.WriteError($"Failed to create solver at {path}: you made need to use the --force");
             return;
         }

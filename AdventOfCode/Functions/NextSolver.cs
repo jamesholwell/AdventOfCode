@@ -23,7 +23,8 @@ internal class NextSolver {
             var day = Puzzle.GetDay(dayMatch);
             var suffix = Puzzle.GetSuffix(dayMatch);
             if (day < 25) {
-                if (Workflow.TryInitialiseSolver(@event, day + 1, suffix, false, out _)) {
+                var nextPuzzle = new PuzzleArguments { Event = @event, Day = day + 1, Suffix = suffix };
+                if (Workflow.TryInitialiseSolver(nextPuzzle, false, out _)) {
                     Console.WriteMessage($"Archived solver {sourcePath} and initialized Day {day + 1}");
                     return;
                 }

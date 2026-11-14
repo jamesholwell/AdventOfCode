@@ -8,8 +8,10 @@ public readonly record struct PuzzleArguments {
     public int Day { get; init; }
 
     public Parts Part { get; init; }
+    
+    public Languages Language { get; init; }
 
-    public string Suffix { get; init; }
+    public string? Suffix { get; init; }
 
     public bool IsValid => Day is >= 1 and <= 25 && Event is >= 2015 and < 2099 &&
                            (Suffix == null || Puzzle.SuffixPattern.IsMatch(Suffix));
@@ -32,5 +34,13 @@ public readonly record struct PuzzleArguments {
     public enum Parts {
         Part1 = 1,
         Part2 = 2
+    }
+
+    public enum Languages {
+        Default,
+        
+        CSharp,
+        
+        FSharp
     }
 }

@@ -95,6 +95,16 @@ internal static class CommandLine {
                      || value.Equals("part2", StringComparison.OrdinalIgnoreCase))
                 args = args with { Part = PuzzleArguments.Parts.Part2 };
 
+            // detect csharp language
+            else if (value.Equals("cs", StringComparison.OrdinalIgnoreCase)
+                     || value.Equals("csharp", StringComparison.OrdinalIgnoreCase))
+                args = args with { Language = PuzzleArguments.Languages.CSharp };
+            
+            // detect fsharp language
+            else if (value.Equals("fs", StringComparison.OrdinalIgnoreCase)
+                     || value.Equals("fsharp", StringComparison.OrdinalIgnoreCase))
+                args = args with { Language = PuzzleArguments.Languages.FSharp };
+
             // anything else is pushed into the hint
             else
                 args = args with { Suffix = $"{args.Suffix}{value}" };
