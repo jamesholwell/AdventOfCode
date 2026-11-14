@@ -12,7 +12,7 @@ internal static class Workflow {
         if (suffix != null && !Puzzle.SuffixPattern.IsMatch(suffix))
             throw new ArgumentOutOfRangeException(nameof(suffix));
 
-        var templatePath = Path.Combine(GetBasePath("AdventOfCode.CSharp"), "TemplateSolver.cs");
+        var templatePath = Path.Combine(GetBasePath("AdventOfCode"), "Templates/TemplateSolver.cs");
         if (!File.Exists(templatePath))
             throw new InvalidOperationException($"Template path not found (tried: {templatePath}");
 
@@ -32,7 +32,7 @@ internal static class Workflow {
         // rewrite the template contents
         var source = File.ReadAllText(templatePath);
         source = source
-            .Replace("namespace AdventOfCode.CSharp;", $"namespace AdventOfCode.Today._{@event};")
+            .Replace("namespace AdventOfCode.Templates;", $"namespace AdventOfCode.Today._{@event};")
             .Replace("TemplateSolver", $"Day{day}{suffix}");
 
         // write the solver

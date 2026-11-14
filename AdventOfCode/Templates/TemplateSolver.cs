@@ -2,7 +2,7 @@
 using Xunit;
 using Xunit.Abstractions;
 
-namespace AdventOfCode.CSharp;
+namespace AdventOfCode.Templates;
 
 public class TemplateSolver(string? input = null, ITestOutputHelper? outputHelper = null)
     : Solver(input, outputHelper) {

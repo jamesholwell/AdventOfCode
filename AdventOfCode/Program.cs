@@ -34,7 +34,7 @@ catch (Exception e) {
 SolverFactory CreateSolverFactory() {
     var solverFactory =
         new SolverFactory()
-            .AddAssembly<AdventOfCode.CSharp.TemplateSolver>(string.Empty)
+            .AddAssembly<AdventOfCode.CSharp.Discovery>(string.Empty)
             .AddAssembly<AdventOfCode.FSharp.TemplateSolver>("fsharp");
     return solverFactory;
 }

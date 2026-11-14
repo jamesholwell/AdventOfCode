@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
-      <Compile Remove="inputs\**" />
-      <EmbeddedResource Remove="inputs\**" />
-      <None Remove="inputs\**" />
+        <Compile Remove="Templates\**" />
+        <Content Include="Templates\**" />
     </ItemGroup>
 
     <ItemGroup>
