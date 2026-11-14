@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Shared.fs" />
         <Compile Include="Discovery.fs" />
     </ItemGroup>
 

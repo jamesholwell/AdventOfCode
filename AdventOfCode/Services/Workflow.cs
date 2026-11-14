@@ -183,16 +183,12 @@ internal static class Workflow {
     }
 
     private class FilePathComparer : IComparer<string?> {
-        private const string Shared = "Shared.fs";
-
         private const string Discovery = "Discovery.fs";
 
         public int Compare(string? x, string? y) {
             if (x == null || y == null) return 0;
 
-            // always sort Shared to top and Discovery to bottom
-            if (x == Shared || y == Shared)
-                return x == Shared ? -1 : 1;
+            // always sort Discovery to bottom
             if (x == Discovery || y == Discovery)
                 return x == Discovery ? 1 : -1;
 

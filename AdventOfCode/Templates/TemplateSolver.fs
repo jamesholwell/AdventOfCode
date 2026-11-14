@@ -1,13 +1,12 @@
 ﻿namespace AdventOfCode.FSharp
 
 open AdventOfCode.Shared
-open AdventOfCode.FSharp
 open Xunit
 
 module TemplateSolver =
-    let Solve = 
-        Shared.Split
-        >> fun s -> 0
+    let Solve =
+        Input.Read
+        >> fun _ -> 0
 
     let SolvePartTwo = fun _ -> failwith "Solve part 1 first"
 
