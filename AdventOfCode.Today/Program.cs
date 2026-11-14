@@ -54,7 +54,7 @@ if (!nameMatch.Success) {
 var day = Puzzle.GetDay(nameMatch);
 
 // read the puzzle input
-if (!Input.TryRead(@event, day, out var input)) {
+if (!Input.TryGetContents(@event, day, out var input)) {
     Console.ForegroundColor = ConsoleColor.DarkRed;
     Console.WriteLine($"Puzzle input is missing ({Input.PathFor(@event, day)})");
     Console.ResetColor();
@@ -78,9 +78,9 @@ namespace AdventOfCode.Shared {
     public static class Input {
         public static string PathFor(int @event, int day) => $"./inputs/{@event}/day{day}.txt";
 
-        public static bool TryRead(int @event, int day, out string? contents) {
+        public static bool TryGetContents(int @event, int day, out string? contents) {
             var path = PathFor(@event, day);
-            
+
             if (!File.Exists(path)) {
                 contents = null;
                 return false;
@@ -90,8 +90,11 @@ namespace AdventOfCode.Shared {
             return true;
         }
 
+        public static string Read(this string s) =>
+            s.Replace("\r\n", "\n").Trim('\n');
+
         public static string[] SplitBy(this string s, string b) =>
-            s.Replace("\r\n", "\n").Trim('\n').Split(b);
+            s.Split(b);
 
         public static string[] Split(this string s) =>
             s.SplitBy("\n");
@@ -184,7 +187,7 @@ namespace AdventOfCode.Shared {
         /// <param name="input">unprocessed contents of the input file</param>
         /// <param name="outputHelper">console-like interface supplied by Xunit / the runner</param>
         protected Solver(string? input = null, ITestOutputHelper? outputHelper = null) {
-            Input = input ?? string.Empty;
+            Input = input?.Read() ?? string.Empty;
             Output = outputHelper ?? new NullOutputHelper();
         
             // disable tracing in default cli usage, but keep it enabled for tests

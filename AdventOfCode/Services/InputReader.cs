@@ -11,7 +11,7 @@ internal static class InputReader {
 
         var path = Path.GetFullPath(Input.PathFor(puzzle.Event, puzzle.Day));
 
-        if (!Input.TryRead(puzzle.Event, puzzle.Day, out input)) {
+        if (!Input.TryGetContents(puzzle.Event, puzzle.Day, out input)) {
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine($"# Trying input {path}");
             Console.ResetColor();

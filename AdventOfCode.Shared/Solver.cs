@@ -18,7 +18,7 @@ public abstract class Solver<T> : ISolver {
     /// <param name="input">unprocessed contents of the input file</param>
     /// <param name="outputHelper">console-like interface supplied by Xunit / the runner</param>
     protected Solver(string? input = null, ITestOutputHelper? outputHelper = null) {
-        Input = input ?? string.Empty;
+        Input = input?.Read() ?? string.Empty;
         Output = outputHelper ?? new NullOutputHelper();
         
         // disable tracing in default cli usage, but keep it enabled for tests
