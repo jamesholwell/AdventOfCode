@@ -8,7 +8,7 @@
 
     <ItemGroup>
         <Compile Include="Shared.fs" />
-        <Compile Include="TemplateSolver.fs" />
+        <Compile Include="Discovery.fs" />
     </ItemGroup>
 
     <ItemGroup>

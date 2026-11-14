@@ -35,6 +35,6 @@ SolverFactory CreateSolverFactory() {
     var solverFactory =
         new SolverFactory()
             .AddAssembly<AdventOfCode.CSharp.Discovery>(string.Empty)
-            .AddAssembly<AdventOfCode.FSharp.TemplateSolver>("fsharp");
+            .AddAssembly<AdventOfCode.FSharp.Discovery>("fsharp");
     return solverFactory;
 }
