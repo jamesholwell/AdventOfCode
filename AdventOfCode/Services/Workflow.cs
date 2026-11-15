@@ -172,18 +172,28 @@ internal static class Workflow {
 
     public static bool Build() {
         var pluginsPath = Path.Combine(GetBasePath("AdventOfCode"), "Library");
-        var projectPath = GetBasePath("AdventOfCode.CSharp");
+        var projectPaths = new[] {
+            GetBasePath("AdventOfCode.CSharp"),
+            GetBasePath("AdventOfCode.FSharp")
+        };
 
         if (!Directory.Exists(pluginsPath))
             Directory.CreateDirectory(pluginsPath);
-        
+
+        var results = projectPaths.Select(path => Build(path, pluginsPath));
+
+        return results.All(r => r);
+    }
+
+    private static bool Build(string projectPath, string outputPath) {
         var startInfo = new ProcessStartInfo("dotnet") {
             UseShellExecute = false,
-            ArgumentList = { "publish", projectPath,
+            ArgumentList = {
+                "publish", projectPath,
                 "--configuration", "Release",
-                "--output", pluginsPath,
-                "-p:BuildLibrary=true", 
-                "-p:EnableDynamicLoading=true" ,
+                "--output", outputPath,
+                "-p:BuildLibrary=true",
+                "-p:EnableDynamicLoading=true",
                 "-p:DebugType=None",
                 "-p:DebugSymbols=false",
                 "-p:CopyOutputSymbolsToPublishDirectory=false",

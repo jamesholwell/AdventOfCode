@@ -7,7 +7,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\AdventOfCode.FSharp\AdventOfCode.FSharp.fsproj" />
+        <ProjectReference Include="..\AdventOfCode.Shared\AdventOfCode.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
