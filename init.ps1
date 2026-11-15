@@ -1,17 +1,6 @@
 ﻿# aoc               - runs the current puzzle solver (supports pt2 and --trace arguments)
-# aoc build         - asks dotnet to release-build the aoc binary
-# aoc fast [args]   - asks dotnet to run the release-build binary
 # aoc [args]        - all other commands (e.g. start, stage, finish) are passed to the main project
-
-function global:build-aoc {
-    dotnet build AdventOfCode -c Release --property WarningLevel=0 -v n
-}
-
-function global:run-aoc {
-    Param([string[]]$arguments)
-    $tfm = "net10.0"
-    dotnet ./AdventOfCode/bin/Release/$tfm/AdventOfCode.dll @arguments
-}
+# aoc buildself     - asks dotnet to rebuild the main aoc binary
 
 function global:aoc {
     Param([parameter(ValueFromRemainingArguments = $true)][string[]]$arguments)
@@ -24,19 +13,20 @@ function global:aoc {
         return;
     }
 
-    # now check for `aoc buildfast` (handled directly in powershell)
-    if ($arguments.Count -eq 1 -and $arguments[0] -eq "buildfast") {
-        build-aoc
-        return;
-    }
-
-    # now check for `aoc fast` (handled directly in powershell)
-    if ($arguments.Count -ge 1 -and $arguments[0] -eq "fast") {
-        $rest = $arguments.Count -gt 1 ? $arguments[1..($arguments.Count - 1)] : @()
-        run-aoc $rest
+    # now check for `aoc buildself` (handled directly in powershell)
+    if ($arguments.Count -eq 1 -and $arguments[0] -eq "buildself") {
+        dotnet build AdventOfCode -c Release --property WarningLevel=0 -v n
         return;
     }
     
-    # all other commands are delegated to the main project
-    dotnet build --nologo -v q --property WarningLevel=0 /clp:ErrorsOnly ./AdventOfCode && dotnet run --no-build --project ./AdventOfCode -- @arguments
+    # ensure the binary is available, or build (and quit on error)
+    $tfm = "net10.0"
+    $dll = "./AdventOfCode/bin/Release/$tfm/AdventOfCode.dll"
+    if (-not (test-path $dll -type leaf)) {
+        dotnet build AdventOfCode -c Release --property WarningLevel=0 -v q
+        if ($LASTEXITCODE -ne 0) { return }
+    }
+     
+    # delegate all other commands to the main project
+    dotnet $dll @arguments
 }
