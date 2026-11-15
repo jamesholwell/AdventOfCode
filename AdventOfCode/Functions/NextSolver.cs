@@ -12,7 +12,13 @@ internal class NextSolver {
 
         if (!Workflow.TryStageFile(sourcePath!, true, out var targetPath))
             throw new InvalidOperationException("Failed to stage file during finish");
-
+        
+        // try to rebuild the library
+        if (!Workflow.Build()) {
+            Console.WriteError($"Build failed after committing {sourcePath} to library");
+            return;
+        }
+        
         // delete the source
         File.Delete(sourcePath!);
 

@@ -1,3 +1,7 @@
 namespace AdventOfCode.FSharp
 
-type Discovery = Discovery of int
+open AdventOfCode.Shared
+
+type Discovery() =
+    interface ISolverDiscovery with
+        member _.Prefix = "fsharp"

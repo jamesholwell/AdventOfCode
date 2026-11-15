@@ -3,11 +3,11 @@
     <ItemGroup>
         <Compile Remove="Templates\**" />
         <Content Include="Templates\**" />
+        <None Remove="Library\**" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\AdventOfCode.FSharp\AdventOfCode.FSharp.fsproj" />
-        <ProjectReference Include="..\AdventOfCode.CSharp\AdventOfCode.CSharp.csproj" />
+        <ProjectReference Include="..\AdventOfCode.Shared\AdventOfCode.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>

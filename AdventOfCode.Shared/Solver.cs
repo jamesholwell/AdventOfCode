@@ -7,6 +7,10 @@ public interface ISolver {
     string SolvePartTwo();
 }
 
+public interface ISolverDiscovery {
+    string Prefix { get; }
+}
+
 /// <summary>
 ///     Strongly typed base class for solvers returning solutions of type T
 /// </summary>

@@ -5,7 +5,7 @@ using AdventOfCode.Functions;
 namespace AdventOfCode.Services;
 
 internal static class CommandLine {
-    internal static RootCommand BuildRoot(Func<SolverFactory> solverFactoryFactory) {
+    internal static RootCommand BuildRoot() {
         var puzzleArgument =
             new Argument<PuzzleArguments>("puzzle") {
                 Description = "Puzzle to solve e.g. 'day1' or '2015 day1' or 'day3 part2'",
@@ -16,16 +16,19 @@ internal static class CommandLine {
         var forceOption = new Option<bool>("--force")
             { Description = "Continue despite errors (e.g. overwrite an existing file)" };
 
+        var verboseOption = new Option<bool>("--verbose")
+            { Aliases = { "-v" }};
+
         // basic usage
         var traceOption = new Option<bool>("--trace") { Description = "Output trace information" };
         var benchmarkOption = new Option<bool>("--bench") { Description = "Benchmark solver performance" };
         var run = new Command("run", "Solve a puzzle (default)") {
             Arguments = { puzzleArgument },
-            Options = { traceOption, benchmarkOption },
+            Options = { traceOption, benchmarkOption, verboseOption },
         };
         Action<ParseResult> runAction = parse => {
             var puzzle = parse.GetValue(puzzleArgument);
-            var factory = solverFactoryFactory();
+            var factory = SolverFactory.Build(parse.GetValue(verboseOption));
 
             if (!puzzle.IsValid)
                 new ListSolvers(factory).Execute();
@@ -55,9 +58,15 @@ internal static class CommandLine {
         var next = new Command("next", "Finishes the current puzzle and starts the next day.");
         next.SetAction(_ => new NextSolver().Execute());
 
-        var list = new Command("list", "Show all available solvers");
-        list.SetAction(_ => {
-            var factory = solverFactoryFactory();
+        // library
+        var build = new Command("build", "(Re)build the solver library project");
+        build.SetAction(_ => new BuildLibrary().Execute());
+        
+        var list = new Command("list", "Show all available solvers") {
+            Options = { verboseOption }
+        };
+        list.SetAction(parse => {
+            var factory = SolverFactory.Build(parse.GetValue(verboseOption));
             new ListSolvers(factory).Execute();
         });
 
@@ -68,6 +77,7 @@ internal static class CommandLine {
         rootCommand.Subcommands.Add(stage);
         rootCommand.Subcommands.Add(finish);
         rootCommand.Subcommands.Add(next);
+        rootCommand.Subcommands.Add(build);
         rootCommand.Subcommands.Add(list);
         rootCommand.SetAction(runAction);
         return rootCommand;

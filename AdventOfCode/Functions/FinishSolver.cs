@@ -20,6 +20,12 @@ internal class FinishSolver {
         if (Directory.GetFiles(sourceDirectory).Length == 0)
             Directory.Delete(sourceDirectory);
         
+        // rebuild the library
+        if (!Workflow.Build()) {
+            Console.WriteError($"Build failed after committing {sourcePath} to library");
+            return;
+        }
+        
         Console.WriteMessage($"Archived solver {sourcePath} to {targetPath}");
     }
 }

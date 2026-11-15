@@ -1,11 +1,16 @@
+using System.Reflection;
+using System.Runtime.Loader;
 using AdventOfCode.Shared;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.Services;
 
-public class SolverFactory {
+public class SolverFactory(bool verbose) {
     private readonly IDictionary<PuzzleSpecification, Type> _solvers =
         new SortedDictionary<PuzzleSpecification, Type>(new SolverComparer());
+
+    internal static SolverFactory Build(bool verbose) =>
+        new SolverFactory(verbose).DiscoverAssemblies();
 
     public ISolver? Create(int @event, int day, string? suffix, string input, ITestOutputHelper? output = null) {
         var candidates = _solvers.Keys.Where(k => k.Event == @event && k.Day == day).ToArray();
@@ -45,39 +50,57 @@ public class SolverFactory {
         return _solvers.Keys.Select(ps => ps.ToString());
     }
 
-    public SolverFactory AddAssembly<T>(string prefix) {
-        foreach (var type in typeof(T).Assembly.GetTypes().Where(t => typeof(ISolver).IsAssignableFrom(t))) {
-            if (type.Name.Contains("TemplateSolver")) continue;
-            if (type.IsAbstract) continue;
+    private SolverFactory DiscoverAssemblies() {
+        var basePath = Workflow.GetBasePath("AdventOfCode/Library/");
 
-            // determine the puzzle event
-            var namespaceMatch = Puzzle.EventPattern.Match(type.Namespace ?? string.Empty);
-            if (!namespaceMatch.Success) {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"# {type.FullName} has has missing or unexpected namespace (expected: {{**}}._2015; found: {type.Namespace})");
-                Console.ResetColor();
+        foreach (var candidate in Directory.EnumerateFiles(basePath, "AdventOfCode.*.dll")) {
+            if (candidate.EndsWith("AdventOfCode.Shared.dll"))
                 continue;
-            }
 
-            var @event = Puzzle.GetEvent(namespaceMatch);
+            if (verbose)
+                Console.WriteMessage($"# Discovered {candidate}");
 
-            // determine the puzzle day
-            var nameMatch = Puzzle.DayPattern.Match(type.Name);
-            if (!nameMatch.Success) {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"# {type.FullName} has unexpected type name (expected: Day1; found: {type.Name})");
-                Console.ResetColor();
-                continue;
-            }
+            var assemblyPath = Path.GetFullPath(candidate);
+            var context = new LibraryLoadContext(assemblyPath);
+            var assembly = context.LoadFromAssemblyPath(assemblyPath);
 
-            var day = Puzzle.GetDay(nameMatch);
-            var suffix = Puzzle.GetSuffix(nameMatch);
-            var hint = string.IsNullOrWhiteSpace(prefix) ? suffix : $"{suffix}#{prefix}";
+            var discoveryType = assembly.GetTypes()
+                .FirstOrDefault(t => !t.IsAbstract && typeof(ISolverDiscovery).IsAssignableFrom(t));
+            var discovery = discoveryType == null ? null : Activator.CreateInstance(discoveryType) as ISolverDiscovery;
 
-            _solvers[new PuzzleSpecification(@event, day, hint)] = type;
+            foreach (var type in assembly.GetTypes().Where(t => !t.IsAbstract && typeof(ISolver).IsAssignableFrom(t)))
+                AddSolver(type, discovery?.Prefix);
         }
 
         return this;
+    }
+
+    private void AddSolver(Type type, string? prefix) {
+        // determine the puzzle event
+        var namespaceMatch = Puzzle.EventPattern.Match(type.Namespace ?? string.Empty);
+        if (!namespaceMatch.Success) {
+            if (verbose)
+                Console.WriteMessage($"# {type.FullName} has has missing or unexpected namespace (expected: {{**}}._2015; found: {type.Namespace})");
+            
+            return;
+        }
+
+        var @event = Puzzle.GetEvent(namespaceMatch);
+
+        // determine the puzzle day
+        var nameMatch = Puzzle.DayPattern.Match(type.Name);
+        if (!nameMatch.Success) {
+            if (verbose)
+                Console.WriteMessage($"# {type.FullName} has unexpected type name (expected: Day1; found: {type.Name})");
+            
+            return;
+        }
+
+        var day = Puzzle.GetDay(nameMatch);
+        var suffix = Puzzle.GetSuffix(nameMatch);
+        var hint = string.IsNullOrWhiteSpace(prefix) ? suffix : $"{suffix}#{prefix}";
+
+        _solvers[new PuzzleSpecification(@event, day, hint)] = type;
     }
 
     private readonly record struct PuzzleSpecification(int Event, int Day, string? Suffix) {
@@ -96,6 +119,39 @@ public class SolverFactory {
             if (x.Day < y.Day) return -1;
 
             return string.CompareOrdinal(x.Suffix, y.Suffix);
+        }
+    }
+
+    private sealed class LibraryLoadContext(string basePath) : AssemblyLoadContext {
+        private readonly AssemblyDependencyResolver _resolver = new(basePath);
+
+        private static readonly string[] AllowedAssemblyNames = [
+            "FSharp.Core"
+        ];
+
+        protected override Assembly? Load(AssemblyName name) {
+            // redirect AdventOfCode.Shared to the existing
+            if (name.Name == typeof(ISolver).Assembly.GetName().Name)
+                return typeof(ISolver).Assembly;
+
+            // redirect Xunit libraries to the existing
+            if (name.Name == typeof(ITestOutputHelper).Assembly.GetName().Name)
+                return typeof(ITestOutputHelper).Assembly; // Xunit.Abstractions
+
+            var path = _resolver.ResolveAssemblyToPath(name);
+            if (path != null && AllowedAssemblyNames.Contains(name.Name))
+                return LoadFromAssemblyPath(path);
+
+            if (path == null) return null;
+
+            // show a warning if we refuse to load an unknown assembly
+            Console.WriteError($"# Rejected request to load {name} from {path}", false);
+            return null;
+        }
+
+        protected override nint LoadUnmanagedDll(string name) {
+            Console.WriteError($"# Rejected request to load {name} (unmanaged)", false);
+            return nint.Zero;
         }
     }
 }
