@@ -10,12 +10,14 @@ internal static class Extensions {
             Console.ResetColor();
         }
 
-        internal static void WriteError(string errorMessage) {
+        internal static void WriteError(string errorMessage, bool addNewLine = true) {
+            var foreground = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.DarkRed;
             Console.WriteLine(errorMessage);
-            Console.ResetColor();
-
-            Console.WriteLine(string.Empty);
+            Console.ForegroundColor = foreground;
+            
+            if (addNewLine)
+                Console.WriteLine(string.Empty);
         }
     }
 
