@@ -12,7 +12,13 @@ internal class NextSolver {
 
         if (!Workflow.TryStageFile(sourcePath!, true, out var targetPath))
             throw new InvalidOperationException("Failed to stage file during finish");
-
+        
+        // try to rebuild the library
+        if (!Workflow.Build()) {
+            Console.WriteError($"Build failed after committing {sourcePath} to library");
+            return;
+        }
+        
         // delete the source
         File.Delete(sourcePath!);
 
@@ -35,12 +41,6 @@ internal class NextSolver {
         var sourceDirectory = Path.GetDirectoryName(sourcePath!)!;
         if (Directory.GetFiles(sourceDirectory).Length == 0)
             Directory.Delete(sourceDirectory);
-        
-        // rebuild the library
-        if (!Workflow.Build()) {
-            Console.WriteError($"Build failed after committing {sourcePath} to library");
-            return;
-        }
         
         Console.WriteMessage($"Archived solver {sourcePath} to {targetPath}");
     }
