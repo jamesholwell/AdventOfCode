@@ -4,7 +4,7 @@ using AdventOfCode.Services;
 
 try {
     return await
-        CommandLine.BuildRoot(CreateSolverFactory)
+        CommandLine.BuildRoot()
             .Parse(args)
             .InvokeAsync(new InvocationConfiguration {
                 EnableDefaultExceptionHandler = false
@@ -29,12 +29,4 @@ catch (Exception e) {
     Console.WriteLine(e.ToString());
     Console.WriteLine(string.Empty);
     return -1;
-}
-
-SolverFactory CreateSolverFactory() {
-    var solverFactory =
-        new SolverFactory()
-            .AddAssembly<AdventOfCode.CSharp.Discovery>(string.Empty)
-            .AddAssembly<AdventOfCode.FSharp.Discovery>("fsharp");
-    return solverFactory;
 }

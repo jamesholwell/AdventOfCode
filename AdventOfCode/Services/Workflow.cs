@@ -197,7 +197,7 @@ internal static class Workflow {
         return process.ExitCode == 0;
     }
     
-    private static string GetBasePath(string projectName) {
+    internal static string GetBasePath(string projectName) {
         // use the currently executing image to reliably traverse to the project root folders 
         // app context is typically ./AdventOfCode/bin/Debug/netX.0/
         var basePath = Path.GetRelativePath(

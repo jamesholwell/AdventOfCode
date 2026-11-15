@@ -1,4 +1,7 @@
+using System.Reflection;
+using System.Runtime.Loader;
 using AdventOfCode.Shared;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace AdventOfCode.Services;
@@ -6,6 +9,11 @@ namespace AdventOfCode.Services;
 public class SolverFactory {
     private readonly IDictionary<PuzzleSpecification, Type> _solvers =
         new SortedDictionary<PuzzleSpecification, Type>(new SolverComparer());
+
+    internal static SolverFactory Build(bool verbose) =>
+        new SolverFactory()
+            .DiscoverAssemblies(verbose)
+            .AddAssembly<FSharp.Discovery>("fsharp");
 
     public ISolver? Create(int @event, int day, string? suffix, string input, ITestOutputHelper? output = null) {
         var candidates = _solvers.Keys.Where(k => k.Event == @event && k.Day == day).ToArray();
@@ -45,17 +53,35 @@ public class SolverFactory {
         return _solvers.Keys.Select(ps => ps.ToString());
     }
 
-    public SolverFactory AddAssembly<T>(string prefix) {
-        foreach (var type in typeof(T).Assembly.GetTypes().Where(t => typeof(ISolver).IsAssignableFrom(t))) {
+    public SolverFactory DiscoverAssemblies(bool verbose = false) { 
+        var basePath = Workflow.GetBasePath("AdventOfCode/Library/");
+
+        foreach (var candidate in Directory.EnumerateFiles(basePath, "AdventOfCode.*.dll")) {
+            if (candidate.EndsWith("AdventOfCode.Shared.dll"))
+                continue;
+
+            if (verbose)
+                Console.WriteMessage($"# Discovered {candidate}");
+
+            var context = new LibraryLoadContext(Path.GetFullPath(candidate), verbose);
+            var assembly = context.LoadFromAssemblyPath(Path.GetFullPath(candidate));
+            AddAssembly(assembly, string.Empty);
+        }
+
+        return this;
+    }
+
+    public SolverFactory AddAssembly<T>(string prefix) => AddAssembly(typeof(T).Assembly, prefix);
+
+    private SolverFactory AddAssembly(Assembly assembly, string prefix) {
+        foreach (var type in assembly.GetTypes().Where(t => typeof(ISolver).IsAssignableFrom(t))) {
             if (type.Name.Contains("TemplateSolver")) continue;
             if (type.IsAbstract) continue;
 
             // determine the puzzle event
             var namespaceMatch = Puzzle.EventPattern.Match(type.Namespace ?? string.Empty);
             if (!namespaceMatch.Success) {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"# {type.FullName} has has missing or unexpected namespace (expected: {{**}}._2015; found: {type.Namespace})");
-                Console.ResetColor();
+                Console.WriteMessage($"# {type.FullName} has has missing or unexpected namespace (expected: {{**}}._2015; found: {type.Namespace})");
                 continue;
             }
 
@@ -64,9 +90,7 @@ public class SolverFactory {
             // determine the puzzle day
             var nameMatch = Puzzle.DayPattern.Match(type.Name);
             if (!nameMatch.Success) {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"# {type.FullName} has unexpected type name (expected: Day1; found: {type.Name})");
-                Console.ResetColor();
+                Console.WriteMessage($"# {type.FullName} has unexpected type name (expected: Day1; found: {type.Name})");
                 continue;
             }
 
@@ -96,6 +120,32 @@ public class SolverFactory {
             if (x.Day < y.Day) return -1;
 
             return string.CompareOrdinal(x.Suffix, y.Suffix);
+        }
+    }
+
+    private sealed class LibraryLoadContext(string basePath, bool verbose) : AssemblyLoadContext {
+        private readonly AssemblyDependencyResolver _resolver = new(basePath);
+
+        protected override Assembly? Load(AssemblyName name) {
+            // redirect AdventOfCode.Shared to the existing
+            if (name.Name == typeof(ISolver).Assembly.GetName().Name)
+                return typeof(ISolver).Assembly;
+
+            // redirect Xunit libraries to the existing
+            if (name.Name == typeof(ITestOutputHelper).Assembly.GetName().Name)
+                return typeof(ITestOutputHelper).Assembly; // Xunit.Abstractions
+
+            var path = _resolver.ResolveAssemblyToPath(name);
+            if (!verbose || path == null) return null;
+
+            // show a warning if we refuse to load an unknown assembly
+            Console.WriteError($"# Rejected request to load {name} from {path}", false);
+            return null;
+        }
+
+        protected override nint LoadUnmanagedDll(string name) {
+            Console.WriteError($"# Rejected request to load {name} (unmanaged)", false);
+            return nint.Zero;
         }
     }
 }
