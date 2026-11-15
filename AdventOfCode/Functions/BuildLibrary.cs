@@ -3,7 +3,10 @@ using AdventOfCode.Services;
 namespace AdventOfCode.Functions;
 
 internal class BuildLibrary {
-    public void Execute() {
-        if (!Workflow.Build()) Console.WriteError($"Build failed");
+    public int Execute() {
+        if (Workflow.Build()) return 0;
+        
+        Console.WriteError($"Build failed");
+        return -1;
     }
 }
