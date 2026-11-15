@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Xml;
 using System.Xml.Linq;
 using AdventOfCode.Shared;
@@ -169,6 +170,33 @@ internal static class Workflow {
         return true;
     }
 
+    public static bool Build() {
+        var pluginsPath = Path.Combine(GetBasePath("AdventOfCode"), "Library");
+        var projectPath = GetBasePath("AdventOfCode.CSharp");
+
+        if (!Directory.Exists(pluginsPath))
+            Directory.CreateDirectory(pluginsPath);
+        
+        var startInfo = new ProcessStartInfo("dotnet") {
+            UseShellExecute = false,
+            ArgumentList = { "publish", projectPath,
+                "--configuration", "Release",
+                "--output", pluginsPath,
+                "-p:BuildLibrary=true", 
+                "-p:EnableDynamicLoading=true" ,
+                "-p:DebugType=None",
+                "-p:DebugSymbols=false",
+                "-p:CopyOutputSymbolsToPublishDirectory=false",
+                "-p:GenerateRuntimeConfigurationFiles=false"
+            }
+        };
+
+        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start dotnet publish");
+        process.WaitForExit();
+
+        return process.ExitCode == 0;
+    }
+    
     private static string GetBasePath(string projectName) {
         // use the currently executing image to reliably traverse to the project root folders 
         // app context is typically ./AdventOfCode/bin/Debug/netX.0/

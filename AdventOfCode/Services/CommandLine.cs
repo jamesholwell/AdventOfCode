@@ -55,6 +55,10 @@ internal static class CommandLine {
         var next = new Command("next", "Finishes the current puzzle and starts the next day.");
         next.SetAction(_ => new NextSolver().Execute());
 
+        // library
+        var build = new Command("build", "(Re)build the solver library project");
+        build.SetAction(_ => new BuildLibrary().Execute());
+        
         var list = new Command("list", "Show all available solvers");
         list.SetAction(_ => {
             var factory = solverFactoryFactory();
@@ -68,6 +72,7 @@ internal static class CommandLine {
         rootCommand.Subcommands.Add(stage);
         rootCommand.Subcommands.Add(finish);
         rootCommand.Subcommands.Add(next);
+        rootCommand.Subcommands.Add(build);
         rootCommand.Subcommands.Add(list);
         rootCommand.SetAction(runAction);
         return rootCommand;

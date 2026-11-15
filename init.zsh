@@ -24,8 +24,8 @@ aoc() {
     return
   fi
 
-  # now check for `aoc build` (handled directly in zsh)
-  if [[ ${#args[@]} -eq 1 && ${args[1]} == "build" ]]; then
+  # now check for `aoc buildfast` (handled directly in zsh)
+  if [[ ${#args[@]} -eq 1 && ${args[1]} == "buildfast" ]]; then
     buildaoc
     return
   fi

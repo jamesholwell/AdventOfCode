@@ -35,3 +35,4 @@ _TeamCity*
 inputs
 !inputs/day0.txt
 .DS_Store
+AdventOfCode/Library

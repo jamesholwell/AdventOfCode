@@ -24,8 +24,8 @@ function global:aoc {
         return;
     }
 
-    # now check for `aoc build` (handled directly in powershell)
-    if ($arguments.Count -eq 1 -and $arguments[0] -eq "build") {
+    # now check for `aoc buildfast` (handled directly in powershell)
+    if ($arguments.Count -eq 1 -and $arguments[0] -eq "buildfast") {
         build-aoc
         return;
     }
