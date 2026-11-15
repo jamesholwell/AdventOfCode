@@ -78,8 +78,10 @@ public class SolverFactory(bool verbose) {
     private void AddSolver(Type type, string? prefix) {
         // determine the puzzle event
         var namespaceMatch = Puzzle.EventPattern.Match(type.Namespace ?? string.Empty);
-        if (!namespaceMatch.Success && verbose) {
-            Console.WriteMessage($"# {type.FullName} has has missing or unexpected namespace (expected: {{**}}._2015; found: {type.Namespace})");
+        if (!namespaceMatch.Success) {
+            if (verbose)
+                Console.WriteMessage($"# {type.FullName} has has missing or unexpected namespace (expected: {{**}}._2015; found: {type.Namespace})");
+            
             return;
         }
 
@@ -87,8 +89,10 @@ public class SolverFactory(bool verbose) {
 
         // determine the puzzle day
         var nameMatch = Puzzle.DayPattern.Match(type.Name);
-        if (!nameMatch.Success && verbose) {
-            Console.WriteMessage($"# {type.FullName} has unexpected type name (expected: Day1; found: {type.Name})");
+        if (!nameMatch.Success) {
+            if (verbose)
+                Console.WriteMessage($"# {type.FullName} has unexpected type name (expected: Day1; found: {type.Name})");
+            
             return;
         }
 
