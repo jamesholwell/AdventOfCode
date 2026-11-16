@@ -11,54 +11,96 @@ internal class BenchmarkSolvers(SolverFactory factory) {
             return;
         }
 
-        var solvers = factory.CreateAll(puzzle.Event, puzzle.Day, input!);
+        var solvers = factory.CreateAll(puzzle.Event, puzzle.Day, input!).ToArray();
         if (!solvers.Any()) {
             Console.WriteError("No solvers found");
             return;
         }
 
-        Console.WriteMessage($"# Found {solvers.Count} solvers");
+        Console.WriteMessage($"# Found {solvers.Length} solvers");
         Console.WriteLine();
         
         Console.WriteLine("|--------------------------------|---------------------------|----------------------|");
         Console.WriteLine($"| {"Solver",-30} | {"Solution",-25} | {"Runtime",-20} |");
         Console.WriteLine("|--------------------------------|---------------------------|----------------------|");
 
-        foreach (var pair in solvers) {
-            var solverName = pair.Key;
-            var solver = pair.Value;
+        // preparations
+        int i, j, c = solvers.Length;
+        var durations = new TimeSpan[c];
+        var executions = new int[c];
+        var solutions = new string[c];
+        var isFast = new bool[c];
 
+        // run each solver in turn
+        for (i = 0; i < c; ++i) {
             var sw = new Stopwatch();
             var runs = 1;
-
             sw.Start();
 
-            var solution = solver.Solve(puzzle);
+            // solve and record answer
+            var solver = solvers[i].Value;
+            solutions[i] = solver.Solve(puzzle);
             
-            if (sw.ElapsedMilliseconds < 1000) {
-                // do warmup for fast solvers
-                while (sw.Elapsed.Seconds < 5 && ++runs < 1000)
-                    solution = solver.Solve(puzzle);
+            // keep solving in a loop to smooth the average
+            while (sw.ElapsedMilliseconds < 500 && ++runs < 10_000)
+                solver.Solve(puzzle);
 
-                runs = 0;
-                sw.Restart();
+            sw.Stop();
 
-                while (sw.Elapsed.Seconds < 10 && ++runs < 10000)
-                    solution = solver.Solve(puzzle);
-
-                sw.Stop();
+            // if very fast, throw these results away and signal the second loop
+            if (runs == 10_000) {
+                isFast[i] = true;
+                continue;
             }
+            
+            executions[i] = runs;
+            durations[i] = sw.Elapsed;
+        }
 
-            var averageMs = sw.ElapsedMilliseconds / (double) runs;
+        // now rerun fast solvers in a double loop to smooth out scheduling noise
+        var outerSw = new Stopwatch();
+        var innerSw = new Stopwatch();
+        
+        var totalRuns = 0;
+        var offset = 0;
+        outerSw.Start();
+        
+        while (outerSw.ElapsedMilliseconds < 5_000 && totalRuns < 1_000_000) {
+            ++offset;
+            
+            for (j = 0; j < c; ++j) {
+                // rotate the execution ordering each outer loop
+                i = (j + offset) % c; 
+                
+                if (!isFast[i]) continue;
+                var solver = solvers[i].Value;
+                
+                innerSw.Restart();
+                
+                var runs = 0;
+                do {
+                    solver.Solve(puzzle);
+                } while (++runs < 10_000);
 
+                innerSw.Stop();
+
+                totalRuns += runs;
+                executions[i] += runs;
+                durations[i] += innerSw.Elapsed;
+            }
+        }
+
+        // export the results
+        for (i = 0; i < c; ++i) {
+            var averageMs = durations[i].TotalMilliseconds / executions[i];
             var runtime = averageMs switch {
                 > 5000 => $"{averageMs / 1000:N1}s",
                 > 1000 => $"{averageMs / 1000:N2}s",
                 > 50 => $"{averageMs:N0}ms",
-                _ => $"{sw.ElapsedTicks / (double) runs} ticks"
+                _ => $"{durations[i].Ticks / (double) executions[i]:N4} ticks"
             };
 
-            Console.WriteLine($"| {solverName,-30} | {solution,-25} | {runtime,20} |");
+            Console.WriteLine($"| {solvers[i].Key,-30} | {solutions[i],-25} | {runtime,20} |");
         }
 
         Console.WriteLine("|--------------------------------|---------------------------|----------------------|");
