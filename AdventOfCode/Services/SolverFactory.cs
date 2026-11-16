@@ -12,14 +12,23 @@ public class SolverFactory(bool verbose) {
     internal static SolverFactory Build(bool verbose) =>
         new SolverFactory(verbose).DiscoverAssemblies();
 
-    public ISolver? Create(int @event, int day, string? suffix, string input, ITestOutputHelper? output = null) {
-        var candidates = _solvers.Keys.Where(k => k.Event == @event && k.Day == day).ToArray();
+    public ISolver? Create(PuzzleArguments puzzle, string input, ITestOutputHelper? output = null) {
+        var candidates = _solvers.Keys.Where(k => k.Event == puzzle.Event && k.Day == puzzle.Day).ToArray();
+        var hint = CombineParts(puzzle.LanguagePrefix, puzzle.Suffix);
+        
+        // if ambiguous, first try starts-with match
+        if (candidates.Length > 1 && hint != null) {
+            PuzzleSpecification[] filtered = [..candidates.Where(k => k.Suffix?.StartsWith(hint) == true)];
+            if (filtered.Length > 0)
+                candidates = filtered;
+        }
 
-        if (candidates.Length > 1 && !string.IsNullOrWhiteSpace(suffix))
-            candidates = [.. candidates.Where(k => k.Suffix?.StartsWith(suffix) == true)];
-
-        if (candidates.Length > 1)
-            candidates = [.. candidates.Where(k => k.Suffix == suffix)];
+        // otherwise try exact match (which also matches default i.e. hint == null)
+        if (candidates.Length > 1) {
+            PuzzleSpecification[] filtered = [.. candidates.Where(k => k.Suffix == hint)];
+            if (filtered.Length > 0)
+                candidates = filtered;
+        }
 
         return candidates.Length switch {
             1 => Instantiate(_solvers[candidates[0]], input, output),
@@ -98,10 +107,13 @@ public class SolverFactory(bool verbose) {
 
         var day = Puzzle.GetDay(nameMatch);
         var suffix = Puzzle.GetSuffix(nameMatch);
-        var hint = string.IsNullOrWhiteSpace(prefix) ? suffix : $"{suffix}#{prefix}";
+        var hint = CombineParts(prefix, suffix);
 
         _solvers[new PuzzleSpecification(@event, day, hint)] = type;
     }
+
+    private static string? CombineParts(string? prefix, string? suffix) =>
+        prefix != null && suffix != null ? $"{prefix}#{suffix}" : prefix ?? suffix;
 
     private readonly record struct PuzzleSpecification(int Event, int Day, string? Suffix) {
         public override string ToString() =>
