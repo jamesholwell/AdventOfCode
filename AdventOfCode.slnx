@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Core/">
+    <Project Path="AdventOfCode.Shared/AdventOfCode.Shared.csproj" />
+    <Project Path="AdventOfCode/AdventOfCode.csproj" />
+  </Folder>
+  <Folder Name="/Library/">
+    <Project Path="AdventOfCode.CSharp/AdventOfCode.CSharp.csproj" />
+    <Project Path="AdventOfCode.FSharp/AdventOfCode.FSharp.fsproj" />
+  </Folder>
+  <Project Path="AdventOfCode.Today/AdventOfCode.Today.csproj" />
+</Solution>
