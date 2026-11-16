@@ -1,12 +1,15 @@
 using System.Diagnostics;
 using AdventOfCode.Services;
+using AdventOfCode.Shared;
 
 namespace AdventOfCode.Functions;
 
 internal class BenchmarkSolvers(SolverFactory factory) {
     public void Execute(PuzzleArguments puzzle) {
-        if (!InputReader.TryReadInput(puzzle, out var input))
+        if (!Input.TryGetContents(puzzle.Event, puzzle.Day, out var input)) {
+            Console.WriteError($"Input not found (using: {Input.PathFor(puzzle.Event, puzzle.Day)})");
             return;
+        }
 
         var solvers = factory.CreateAll(puzzle.Event, puzzle.Day, input!);
 

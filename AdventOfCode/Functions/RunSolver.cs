@@ -7,14 +7,17 @@ namespace AdventOfCode.Functions;
 
 internal class RunSolver(SolverFactory factory, bool isTracing = false) {
     public void Execute(PuzzleArguments puzzle) {
-        if (!InputReader.TryReadInput(puzzle, out var input)) {
+        var path = Input.PathFor(puzzle.Event, puzzle.Day);
+        if (!Input.TryGetContents(puzzle.Event, puzzle.Day, out var input)) {
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine("Unable to read puzzle input");
+            Console.WriteLine($"Unable to read puzzle input (using: {path})");
             Console.ResetColor();
 
             Console.WriteLine(string.Empty);
             return;
         }
+        
+        Console.WriteMessage($"# Using input {path} ({input!.Length} characters)");
 
         // resolve solver
         ISolver? solver;
