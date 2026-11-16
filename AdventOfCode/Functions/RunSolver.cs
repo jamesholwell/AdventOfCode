@@ -18,7 +18,7 @@ internal class RunSolver(SolverFactory factory, bool isTracing = false) {
 
         // resolve solver
         ITestOutputHelper output = isTracing ? new TracingConsoleOutputHelper() : new ConsoleOutputHelper(); 
-        var solver = factory.Create(puzzle.Event, puzzle.Day, puzzle.Suffix, input, output);
+        var solver = factory.Create(puzzle, input, output);
 
         if (solver == null) {
             Console.WriteError("No solvers found");

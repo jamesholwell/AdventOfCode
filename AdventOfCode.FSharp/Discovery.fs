@@ -4,4 +4,4 @@ open AdventOfCode.Shared
 
 type Discovery() =
     interface ISolverDiscovery with
-        member _.Prefix = "fsharp"
+        member _.Prefix = "fs"
