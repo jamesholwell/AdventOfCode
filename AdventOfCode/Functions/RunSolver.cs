@@ -7,51 +7,25 @@ namespace AdventOfCode.Functions;
 
 internal class RunSolver(SolverFactory factory, bool isTracing = false) {
     public void Execute(PuzzleArguments puzzle) {
+        // resolve input
         var path = Input.PathFor(puzzle.Event, puzzle.Day);
         if (!Input.TryGetContents(puzzle.Event, puzzle.Day, out var input)) {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine($"Unable to read puzzle input (using: {path})");
-            Console.ResetColor();
-
-            Console.WriteLine(string.Empty);
+            Console.WriteError($"Unable to read puzzle input (using: {path})");
             return;
         }
         
         Console.WriteMessage($"# Using input {path} ({input!.Length} characters)");
 
         // resolve solver
-        ISolver? solver;
-
-        try {
-            ITestOutputHelper output = isTracing ? new TracingConsoleOutputHelper() : new ConsoleOutputHelper();
-            solver = factory.Create(puzzle.Event, puzzle.Day, puzzle.Suffix, input!, output);
-        }
-        catch (AmbiguousSolverException e) {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine(e.Message);
-
-            foreach (var candidate in e.Candidates) {
-                Console.Write("  ");
-                Console.WriteLine(candidate);
-            }
-
-            Console.ResetColor();
-
-            return;
-        }
+        ITestOutputHelper output = isTracing ? new TracingConsoleOutputHelper() : new ConsoleOutputHelper(); 
+        var solver = factory.Create(puzzle.Event, puzzle.Day, puzzle.Suffix, input, output);
 
         if (solver == null) {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine("No solvers found");
-            Console.ResetColor();
-
-            Console.WriteLine(string.Empty);
+            Console.WriteError("No solvers found");
             return;
         }
 
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine($"# Using solver {solver.GetType().FullName}");
-        Console.ResetColor();
+        Console.WriteMessage($"# Using solver {solver.GetType().FullName}");
 
         var sw = new Stopwatch();
         sw.Start();
@@ -60,14 +34,11 @@ internal class RunSolver(SolverFactory factory, bool isTracing = false) {
 
         sw.Stop();
 
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-
-        Console.WriteLine(sw.ElapsedMilliseconds > 0
+        Console.WriteMessage(sw.ElapsedMilliseconds > 0
             ? $"# Runtime {sw.ElapsedMilliseconds}ms"
             : $"# Runtime {sw.ElapsedTicks} ticks");
-        Console.ResetColor();
-
-        Console.WriteLine(string.Empty);
+        
+        Console.WriteLine();
         Console.WriteLine(solution);
     }
 }

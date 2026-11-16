@@ -6,22 +6,16 @@ internal class ListSolvers(SolverFactory factory) {
     public void Execute() {
         var solvers = factory.List().ToArray();
 
-        if (!solvers.Any()) {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine("No solvers found");
+        if (solvers.Length == 0) {
+            Console.WriteError("No solvers found");
         }
         else {
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine("# The following solvers are available:");
-            Console.WriteLine("#   ");
-
-            foreach (var candidate in solvers) {
-                Console.Write("#   ");
-                Console.WriteLine(candidate);
-            }
+            Console.WriteMessage("# The following solvers are available:");
+            
+            foreach (var candidate in solvers) 
+                Console.WriteMessage($"#   {candidate}");
+            
+            Console.WriteLine();
         }
-
-        Console.ResetColor();
-        Console.WriteLine(string.Empty);
     }
 }

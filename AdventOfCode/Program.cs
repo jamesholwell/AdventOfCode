@@ -13,20 +13,16 @@ try {
 catch (AmbiguousSolverException e) {
     Console.WriteError(e.Message);
 
-    Console.ForegroundColor = ConsoleColor.DarkGray;
     foreach (var candidate in e.Candidates)
-        Console.WriteLine(candidate);
+        Console.WriteMessage(candidate);
 
     Console.WriteLine();
-    Console.ResetColor();
-
     return -1;
 }
 catch (Exception e) {
     Console.WriteError(e.Message);
 
-    Console.ForegroundColor = ConsoleColor.DarkGray;
-    Console.WriteLine(e.ToString());
-    Console.WriteLine(string.Empty);
+    Console.WriteMessage(e.ToString());
+    Console.WriteLine();
     return -1;
 }

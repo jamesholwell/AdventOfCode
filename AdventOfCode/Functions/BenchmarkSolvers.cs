@@ -12,21 +12,14 @@ internal class BenchmarkSolvers(SolverFactory factory) {
         }
 
         var solvers = factory.CreateAll(puzzle.Event, puzzle.Day, input!);
-
         if (!solvers.Any()) {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine("No solvers found");
-            Console.ResetColor();
-
-            Console.WriteLine(string.Empty);
-
+            Console.WriteError("No solvers found");
             return;
         }
 
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine($"# Found {solvers.Count} solvers");
-        Console.ResetColor();
-        Console.WriteLine(string.Empty);
+        Console.WriteMessage($"# Found {solvers.Count} solvers");
+        Console.WriteLine();
+        
         Console.WriteLine("|--------------------------------|---------------------------|----------------------|");
         Console.WriteLine($"| {"Solver",-30} | {"Solution",-25} | {"Runtime",-20} |");
         Console.WriteLine("|--------------------------------|---------------------------|----------------------|");
@@ -69,6 +62,6 @@ internal class BenchmarkSolvers(SolverFactory factory) {
         }
 
         Console.WriteLine("|--------------------------------|---------------------------|----------------------|");
-        Console.WriteLine(string.Empty);
+        Console.WriteLine();
     }
 }
