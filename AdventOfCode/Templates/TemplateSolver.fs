@@ -5,8 +5,7 @@ open Xunit
 
 module TemplateSolver =
     let Solve =
-        Input.Read
-        >> fun _ -> 0
+        fun _ -> 0
 
     let SolvePartTwo = fun _ -> failwith "Solve part 1 first"
 
@@ -20,6 +19,7 @@ foo
         Assert.Equal(0, actual)
 
 type TemplateSolver(input: string) =
+    let input = Input.Read input
     interface ISolver with
         member this.SolvePartOne() = TemplateSolver.Solve input |> string
         member this.SolvePartTwo() = TemplateSolver.SolvePartTwo input |> string
