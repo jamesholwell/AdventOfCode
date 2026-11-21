@@ -60,8 +60,14 @@ public class SolverFactory(bool verbose) {
     }
 
     private SolverFactory DiscoverAssemblies() {
-        var basePath = Workflow.GetBasePath("AdventOfCode/Library/");
+        var basePath = Workflow.GetBasePath("AdventOfCode");
 
+        var libraryPath = Path.Combine(basePath, "Library");
+        if (!Directory.Exists(libraryPath)) {
+            Console.WriteError("Library is not initialised: run aoc build first");            
+            return this;
+        }
+        
         foreach (var candidate in Directory.EnumerateFiles(basePath, "AdventOfCode.*.dll")) {
             if (candidate.EndsWith("AdventOfCode.Shared.dll"))
                 continue;
