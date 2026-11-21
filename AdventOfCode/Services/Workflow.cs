@@ -171,27 +171,25 @@ internal static class Workflow {
     }
 
     public static bool Build() {
-        var pluginsPath = Path.Combine(GetBasePath("AdventOfCode"), "Library");
-        var projectPaths = new[] {
-            GetBasePath("AdventOfCode.CSharp"),
-            GetBasePath("AdventOfCode.FSharp")
-        };
+        var basePath = GetBasePath();
+        var solutionPath = Path.Combine(basePath, "AdventOfCode.Library.slnx");
 
-        if (!Directory.Exists(pluginsPath))
-            Directory.CreateDirectory(pluginsPath);
+        var outputPath = Path.GetFullPath(Path.Combine(basePath, "AdventOfCode/Library"));
+        if (outputPath.Contains(';') || outputPath.Contains('%'))
+            throw new InvalidOperationException($"Unsupported build output path: {outputPath}");
 
-        var results = projectPaths.Select(path => Build(path, pluginsPath));
+        if (!Directory.Exists(outputPath))
+            Directory.CreateDirectory(outputPath);
 
-        return results.All(r => r);
-    }
+        if (!Path.EndsInDirectorySeparator(outputPath))
+            outputPath += Path.DirectorySeparatorChar;
 
-    private static bool Build(string projectPath, string outputPath) {
         var startInfo = new ProcessStartInfo("dotnet") {
             UseShellExecute = false,
             ArgumentList = {
-                "publish", projectPath,
+                "publish", solutionPath,
                 "--configuration", "Release",
-                "--output", outputPath,
+                $"-p:PublishDir={outputPath}",
                 "-p:BuildLibrary=true",
                 "-p:EnableDynamicLoading=true",
                 "-p:DebugType=None",
@@ -206,18 +204,21 @@ internal static class Workflow {
 
         return process.ExitCode == 0;
     }
-    
-    internal static string GetBasePath(string projectName) {
+
+    internal static string GetBasePath(string? projectName = null) {
         // use the currently executing image to reliably traverse to the project root folders 
         // app context is typically ./AdventOfCode/bin/Debug/netX.0/
-        var basePath = Path.GetRelativePath(
-            Environment.CurrentDirectory,
-            Path.Combine(Path.Combine(AppContext.BaseDirectory, "../../../../"), projectName));
+        var rootPath = Path.Combine(AppContext.BaseDirectory, "../../../../");
 
-        if (!Directory.Exists(basePath))
-            throw new InvalidOperationException($"Could not locate base path (tried: {basePath})");
+        // optionally: combine with a project subdirectory
+        var path = projectName == null ? rootPath : Path.Combine(rootPath, projectName);
 
-        return basePath;
+        // ensure the base path exists
+        if (!Directory.Exists(path))
+            throw new InvalidOperationException($"Could not locate base path (tried: {path})");
+
+        // return as relative path for concision
+        return Path.GetRelativePath(Environment.CurrentDirectory, path);
     }
 
     private class FilePathComparer : IComparer<string?> {

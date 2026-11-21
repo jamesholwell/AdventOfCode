@@ -1,0 +1,4 @@
+<Solution>
+    <Project Path="AdventOfCode.CSharp/AdventOfCode.CSharp.csproj" />
+    <Project Path="AdventOfCode.FSharp/AdventOfCode.FSharp.fsproj" />
+</Solution>

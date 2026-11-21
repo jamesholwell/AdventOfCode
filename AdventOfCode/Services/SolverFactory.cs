@@ -68,7 +68,7 @@ public class SolverFactory(bool verbose) {
             return this;
         }
         
-        foreach (var candidate in Directory.EnumerateFiles(basePath, "AdventOfCode.*.dll")) {
+        foreach (var candidate in Directory.EnumerateFiles(libraryPath, "AdventOfCode.*.dll")) {
             if (candidate.EndsWith("AdventOfCode.Shared.dll"))
                 continue;
 
