@@ -90,18 +90,33 @@ namespace AdventOfCode.Shared {
             return true;
         }
 
-        public static string Read(this string s) =>
-            s.Replace("\r\n", "\n").Trim('\n');
+        extension(string s) {
+            public string Read() =>
+                s.Replace("\r\n", "\n").Trim('\n');
 
-        public static string[] SplitBy(this string s, string b) =>
-            s.Split(b);
+            public string[] Chunks() =>
+                s.Split("\n\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        public static string[] Split(this string s) =>
-            s.SplitBy("\n");
+            public string[] Lines() =>
+                s.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        public static int[] SplitInt(this string s) => Input.Split(s).Select(int.Parse).ToArray();
+            public string[] Words() =>
+                s.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        public static int[] SplitInt(this string s, string separator) => s.SplitBy(separator).Select(int.Parse).ToArray();
+            public int[] Ints(string separator = "\n") =>
+                [.. s.Split(separator).Select(int.Parse)];
+
+            public long[] Longs(string separator = "\n") =>
+                [.. s.Split(separator).Select(long.Parse)];
+        }
+
+        extension(string[] a) {
+            public int[] Ints() =>
+                [.. a.Select(int.Parse)];
+
+            public long[] Longs() =>
+                [.. a.Select(long.Parse)];
+        }
     }
     
     #endregion
