@@ -11,11 +11,12 @@
     </ItemGroup>
 
     <PropertyGroup>
+        <OutputType>Library</OutputType>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
-        <OutputType>Library</OutputType>
+        <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
     </PropertyGroup>
 
 </Project>
